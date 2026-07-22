@@ -81,9 +81,15 @@ def ssh(host: str, script: str, timeout: int = 45) -> str:
     return ""
 
 def short_model(name: str) -> str:
-  if "3090" in name: return "RTX 3090 Ti"
-  if "4070" in name: return "RTX 4070 Ti S"
-  return name.replace("NVIDIA GeForce ", "").strip() or "unknown"
+  """Whatever the card reports, minus the vendor noise.
+
+  This used to map any "3090" to "RTX 3090 Ti", which asserts a model rather than
+  reading one — a plain 3090 would have been relabelled a Ti.
+  """
+  if "No devices" in name:
+    return "no GPU"
+  short = name.replace("NVIDIA GeForce ", "").replace(" SUPER", " S").strip()
+  return short or "unknown"
 
 def probe(host: str, tries: int = 2) -> dict:
   for _ in range(tries):
