@@ -60,6 +60,8 @@ def handle_for(user: str) -> str:
 MAX_GAP_SECONDS = 20 * 60
 GATECRASH_UTIL = 15
 LEAK_MB = 500
+BUCKET_SECONDS = 15 * 60
+FAMILIES = {"3090": "rtx3090", "4070": "rtx4070"}
 WEEK_SECONDS = 7 * 24 * 3600
 
 PROBE = r"""
@@ -98,7 +100,7 @@ def probe(host: str, tries: int = 2) -> dict:
   for _ in range(tries):
     out = ssh(host, PROBE)
     if "REACHED" in out:
-      gpu, users, mem, mem_total, util, clock = "unknown", [], 0, 0, 0, 0
+      gpu, users, mem, mem_total, util, clock, procs = "unknown", [], 0, 0, 0, 0, 0
       for line in out.splitlines():
         if line.startswith("GPU|"):
           parts = [p.strip() for p in line[4:].split(",")]
@@ -113,10 +115,12 @@ def probe(host: str, tries: int = 2) -> dict:
         elif line.startswith("PROC|"):
           _, user, _ = (line.split("|") + ["", ""])[:3]
           users.append(user)
+          procs += 1
       return {"host": host, "state": "up", "gpu": gpu, "users": sorted(set(users)),
-              "mem": mem, "mem_total": mem_total, "util": util, "clock": clock}
+              "mem": mem, "mem_total": mem_total, "util": util, "procs": procs,
+              "clock": clock}
   return {"host": host, "state": "unreachable", "gpu": "unknown", "users": [],
-          "mem": 0, "mem_total": 0, "util": 0, "clock": 0}
+          "mem": 0, "mem_total": 0, "util": 0, "procs": 0, "clock": 0}
 
 def cluster_time(hosts: list[dict]) -> int:
   """Median clock across reachable machines, falling back to the local one.
@@ -250,6 +254,49 @@ def season_state(now: int, samples: list[dict]) -> dict:
   SEASONS.parent.mkdir(parents=True, exist_ok=True)
   SEASONS.write_text(json.dumps(state, indent=1))
   return {"anchor": anchor, "index": index, "past": past}
+
+def _series(window: list[dict]) -> list[dict]:
+  """Cluster load per 15-minute bucket, split by card family."""
+  buckets: dict[int, dict] = {}
+  for snap in window:
+    slot = snap["t"] - snap["t"] % BUCKET_SECONDS
+    bucket = buckets.setdefault(slot, {})
+    for family in FAMILIES.values():
+      bucket.setdefault(family, [])
+    totals = {family: {"util": 0, "mem": 0.0, "busy": 0, "procs": 0, "up": 0}
+              for family in FAMILIES.values()}
+    for host in snap["hosts"]:
+      if host["state"] != "up":
+        continue
+      family = next((v for k, v in FAMILIES.items() if k in host["gpu"]), None)
+      if family is None:
+        continue
+      row = totals[family]
+      row["up"] += 1
+      row["util"] += host["util"]
+      row["mem"] += host["mem"] / 1024.0
+      row["procs"] += host.get("procs", len(host["users"]))
+      if host["users"]:
+        row["busy"] += 1
+    for family, row in totals.items():
+      if row["up"]:
+        bucket[family].append(row)
+
+  points = []
+  for slot in sorted(buckets):
+    point = {"t": slot}
+    for family, rows in buckets[slot].items():
+      if not rows:
+        continue
+      n = len(rows)
+      point[family] = {
+        "util": round(sum(r["util"] / r["up"] for r in rows) / n, 1),
+        "mem": round(sum(r["mem"] for r in rows) / n, 1),
+        "busy": round(sum(r["busy"] for r in rows) / n, 1),
+        "procs": round(sum(r["procs"] for r in rows) / n, 1),
+      }
+    points.append(point)
+  return points
 
 def build_board(samples: list[dict]) -> dict:
   now = samples[-1]["t"] if samples else int(time.time())
@@ -439,6 +486,7 @@ def build_board(samples: list[dict]) -> dict:
     "trophies": ev,
     "contested": contested[:8],
     "gpu_awards": awards,
+    "series": _series(recent),
     "window_hours": round((recent[-1]["t"] - recent[0]["t"]) / 3600.0, 2) if len(recent) > 1 else 0.0,
     "samples": len(recent),
     "leaderboard": leaderboard,
