@@ -215,10 +215,13 @@ def probe(host: str, tries: int = 2) -> dict:
       return {"host": host, "state": "up", "gpu": gpu, "users": sorted(set(users)),
               "mem": mem, "mem_total": mem_total, "util": util,
               "procs": len(detail), "clock": clock, "smi": smi, "detail": detail,
+              # Lifted out of smi so it survives into history, which the rest
+              # of that dict does not: a season-long award needs every sample.
+              "temp": _int(smi.get("temp", "")),
               "cpu": {u: p for u, p in cpu_only.items() if u not in set(users)}}
   return {"host": host, "state": "unreachable", "gpu": "unknown", "users": [],
           "mem": 0, "mem_total": 0, "util": 0, "procs": 0, "clock": 0,
-          "smi": {}, "detail": [], "cpu": {}}
+          "smi": {}, "detail": [], "temp": 0, "cpu": {}}
 
 def cluster_time(hosts: list[dict]) -> int:
   """Median clock across reachable machines, falling back to the local one.
@@ -513,6 +516,34 @@ def build_board(samples: list[dict], live_snap: dict = None) -> dict:
     if culprits:
       awards["forgotten"]["user"] = handle_for(culprits[0][0])
       awards["forgotten"]["others"] = [handle_for(u) for u, _ in culprits[1:3]]
+  # Heat and crowding, both read straight off the samples. Temperature only
+  # entered history recently, so early samples simply do not vote.
+  temps: dict[str, list[int]] = defaultdict(list)
+  proc_peak: dict[str, int] = defaultdict(int)
+  proc_when: dict[str, int] = {}
+  for snap in recent:
+    for host in snap["hosts"]:
+      if host["state"] != "up":
+        continue
+      if host.get("temp"):
+        temps[host["host"]].append(host["temp"])
+      procs = host.get("procs")
+      if procs and procs > proc_peak[host["host"]]:
+        proc_peak[host["host"]] = procs
+        proc_when[host["host"]] = snap["t"]
+
+  hot = {h: sum(v) / len(v) for h, v in temps.items() if len(v) >= 4}
+  if hot:
+    host = max(hot, key=lambda h: (hot[h], max(temps[h])))
+    awards["furnace"] = _award(host, {"temp": round(hot[host]),
+                                      "peak": max(temps[host]),
+                                      "samples": len(temps[host])})
+  if proc_peak:
+    host = max(proc_peak, key=lambda h: (proc_peak[h], host_busy.get(h, 0.0)))
+    if proc_peak[host] > 1:
+      awards["anthill"] = _award(host, {"procs": proc_peak[host],
+                                        "t": proc_when.get(host)})
+
   occupancy = {h: host_busy.get(h, 0.0) / total for h, total in host_total.items() if total > 0}
   if occupancy:
     host = max(occupancy, key=lambda h: (occupancy[h], host_total[h]))

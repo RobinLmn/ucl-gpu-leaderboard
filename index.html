@@ -200,7 +200,7 @@
   </div>
 
   <h2>🎖️ GPU trophies</h2>
-  <div class="trophies" id="gputrophies"></div>
+  <div class="trophies four" id="gputrophies"></div>
 
   <h2>🗺️ The lab, right now</h2>
   <div class="filters" id="mapfilters"></div>
@@ -575,7 +575,8 @@ function render(b){
     playboy: ["🐰", "The Playboy"], ploughing: ["🧑‍🌾", "Ploughing By Hand"]};
   const GPU_MARKS = {unstable: ["💥", "Most Unstable"], crowded: ["🎪", "Grand Central"],
     exclusive: ["🚪", "Private Club"], loyal: ["💍", "Best Friends"],
-    forgotten: ["👻", "Forgotten"], workhorse: ["🐴", "The Workhorse"]};
+    forgotten: ["👻", "Forgotten"], workhorse: ["🐴", "The Workhorse"],
+    furnace: ["🔥", "The Furnace"], anthill: ["🐜", "The Anthill"]};
   userMarks = {}; gpuMarks = {};
   for (const [key, mark] of Object.entries(USER_MARKS)) {
     const row = (b.trophies?.[key] || [])[0];
@@ -706,6 +707,13 @@ function render(b){
     ["💍 Best Friends", "loyal", a => a.user,
      a => `Best friends: ${a.user} spent ${a.share}% of all their GPU time on ${card(a)} (${a.gpu}), ${a.hours}h`,
      "inseparable — this person runs nearly everything on this one card"],
+    ["🔥 The Furnace", "furnace", a => `${a.temp}°C sustained`,
+     a => `Furnace: ${card(a)} (${a.gpu}) averaged ${a.temp}°C across ${a.samples} samples this season, peaking at ${a.peak}°C`,
+     "runs hotter for longer than any other card — sit near this one in winter"],
+    ["🐜 The Anthill", "anthill", a => `${a.procs} processes at once`,
+     a => `Anthill: ${card(a)} (${a.gpu}) had ${a.procs} compute processes running on it simultaneously${
+       a.t ? ` at ${new Date(a.t*1000).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}` : ""}`,
+     "the most jobs ever piled onto one card at the same moment"],
     ["🐴 The Workhorse", "workhorse", a => `${a.busy_pct}% of the season busy`,
      a => `Workhorse: ${card(a)} (${a.gpu}) was occupied ${a.busy_pct}% of the season — ${a.hours}h of work`,
      "occupied more of the season than any other card — it has not had a minute to itself"],
