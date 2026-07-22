@@ -150,7 +150,7 @@ function titles(row, best){
   if (row.user === best.live && row.live > 1)
     t.push(["🐙", "Octopus", `Holding the most cards at once right now (${row.live}).`]);
   if (row.live === 0 && row.hours > 0)
-    t.push(["👻", "Ghost", "Has logged GPU-hours but has nothing running at the moment."]);
+    t.push(["😴", "Sleeping", "Has logged GPU-hours but has nothing running at the moment."]);
   if (row.hours > 0 && row.hours < 1)
     t.push(["🐣", "Tourist", "Under one GPU-hour in total. Just passing through."]);
   return t;
@@ -239,7 +239,8 @@ function render(b){
      "longest single stretch holding one card without letting go"],
     ["🏁 Reboot Rush", "reboot_rush", r => r.user, r => `${r.claims} cards claimed`,
      "cards grabbed during the Monday / Thursday reboot scramble"],
-    ["🛋️ Prime Squatter", "squatters", r => r.user, r => `${r.util}% average utilisation`,
+    ["🛋️ Prime Squatter", "squatters", r => r.user,
+     r => `${r.util}% util on ${r.cards ?? 0} card${r.cards === 1 ? "" : "s"}`,
      "holds cards while barely using them — the true villain"],
     ["🔄 Hottest Seat", "hottest_seat", r => r.host, r => `${r.flips} changes of hands`,
      "the card that gets passed around the most"],

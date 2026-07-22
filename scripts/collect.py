@@ -242,6 +242,8 @@ def build_board(samples: list[dict]) -> dict:
   ev = _events(recent)
   for key in ("quickest_draw", "longest_hold", "reboot_rush", "squatters"):
     for row in ev[key]:
+      if key == "squatters":
+        row["cards"] = len(live_users.get(row["user"], []))
       row["user"] = handle_for(row["user"])
 
   now_sharers = {h["host"]: h["users"] for h in latest["hosts"] if h.get("users")}
