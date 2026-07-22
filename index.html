@@ -493,17 +493,39 @@ let userMarks = {}, gpuMarks = {};
 const marks = (table, key) => (table[key] || [])
   .map(([emoji, name]) => `<span class="mk" title="${name}">${emoji}</span>`).join("");
 
-function titles(row, best){
+function held(row){
+  if (!row.since) return "";
+  const h = Math.floor((Date.now()/1000 - row.since) / 3600);
+  const m = Math.floor(((Date.now()/1000 - row.since) % 3600) / 60);
+  return `${h}h ${m}m`;
+}
+
+function titles(row, best, ctx){
   const t = [];
   if (row.user === best.hours)
     t.push(["👑", "GPU Overlord", "Most GPU-hours of anyone in the tracking window."]);
+  if (ctx.total > 0 && row.hours / ctx.total >= 0.4)
+    t.push(["🦁", "Lion's Share", `${fmt(row.hours)} of the ${fmt(ctx.total)} gpu-hours tracked this season are theirs — ${Math.round(100*row.hours/ctx.total)}% of the entire cluster.`]);
+  if (ctx.runnerUp === row.user && ctx.gap <= 0.1)
+    t.push(["👟", "Breathing Down Their Neck", `Second place, only ${fmt(ctx.leader - row.hours)} gpu-hours behind the crown.`]);
   if (row.user === best.night && row.night > 0.2)
     t.push(["🦉", "Night Owl", `Most GPU-hours between 23:00 and 06:00 (${row.night}h of theirs were overnight).`]);
+  if (row.hours > 0.5 && row.night / row.hours >= 0.6)
+    t.push(["🧛", "The Vampire", `${row.night}h of their ${fmt(row.hours)}h were between 23:00 and 06:00 — ${Math.round(100*row.night/row.hours)}% of everything they run.`]);
+  if (row.user === best.morning && row.morning > 0.2)
+    t.push(["🥛", "The Milkman", `Most GPU-hours between 06:00 and 09:00 (${row.morning}h of theirs) — on the cluster while the lab is still dark.`]);
   if (row.user === best.live && row.live > 1)
     t.push(["🐙", "Octopus", `Holding the most cards at once right now (${row.live}).`]);
+  if (row.since && (Date.now()/1000 - row.since) >= 12*3600)
+    t.push(["🪑", "Still Sitting There", `Has held the same card without a break ${row.floor ? "for at least" : "for"} ${held(row)}${
+      row.floor ? " — since before the board started watching this season" : `, since ${new Date(row.since*1000).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}`}.`]);
+  if (ctx.days >= 2 && row.days >= ctx.days)
+    t.push(["📅", "Clocking In", `On the cluster every one of the ${ctx.days} days of the season so far — has not missed one.`]);
   if (row.live === 0 && row.hours > 0)
     t.push(["😴", "Sleeping", "Has logged GPU-hours but has nothing running at the moment."]);
-  if (row.hours > 0 && row.hours < 1)
+  if (row.hours < 0.5 && row.live > 0)
+    t.push(["🥚", "Fresh Meat", `Only ${row.hours} gpu-hours logged and already on ${row.live} card${row.live === 1 ? "" : "s"} — just turned up.`]);
+  else if (row.hours > 0 && row.hours < 1 && row.live === 0)
     t.push(["🐣", "Tourist", "Under one GPU-hour in total. Just passing through."]);
   return t;
 }
@@ -528,6 +550,15 @@ function render(b){
     hours: lb[0]?.user,
     night: lb.slice().sort((a,b2)=>b2.night-a.night)[0]?.user,
     live:  lb.slice().sort((a,b2)=>b2.live-a.live)[0]?.user,
+    morning: lb.slice().sort((a,b2)=>(b2.morning||0)-(a.morning||0))[0]?.user,
+  };
+  const leaderHours = lb[0]?.hours || 0;
+  const titleCtx = {
+    total: totalHours,
+    leader: leaderHours,
+    runnerUp: lb[1]?.user,
+    gap: leaderHours > 0 && lb[1] ? (leaderHours - lb[1].hours) / leaderHours : 1,
+    days: b.season_days || 0,
   };
 
   const medals = ["🥇","🥈","🥉"], cls = ["p1","p2","p3"];
@@ -591,7 +622,7 @@ function render(b){
         </div>
       </td>
       <td>${r.live || "—"}</td>
-      <td>${titles(r, best).map(([e,l,d]) =>
+      <td>${titles(r, best, titleCtx).map(([e,l,d]) =>
             `<span class="badge" title="${l} — ${d}">${e} ${l}</span>`).join("") || "—"}</td>
     </tr>`).join("")
     || `<tr><td colspan="5" style="color:var(--dim)">nothing recorded yet</td></tr>`;

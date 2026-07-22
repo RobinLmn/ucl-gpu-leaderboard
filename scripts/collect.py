@@ -421,6 +421,9 @@ def build_board(samples: list[dict], live_snap: dict = None) -> dict:
   host_model: dict[str, str] = {}
   peak = {"gpus": 0, "users": 0, "t": None}
   night_hours: dict[str, float] = defaultdict(float)
+  morning_hours: dict[str, float] = defaultdict(float)
+  days_seen: dict[str, set] = defaultdict(set)   # user -> which days they turned up
+  season_days: set = set()
   plough_hours: dict[str, float] = defaultdict(float)   # CPU burned, GPU untouched
   plough_peak: dict[str, int] = defaultdict(int)
 
@@ -429,7 +432,10 @@ def build_board(samples: list[dict], live_snap: dict = None) -> dict:
     if gap <= 0 or gap > MAX_GAP_SECONDS:
       continue                      # gap in coverage: credit nobody
     hours = gap / 3600.0
-    hour_of_day = time.localtime(current["t"]).tm_hour
+    when = time.localtime(current["t"])
+    hour_of_day = when.tm_hour
+    day = time.strftime("%Y-%m-%d", when)
+    season_days.add(day)
     live = 0
     live_people = set()
     for host in current["hosts"]:
@@ -442,8 +448,11 @@ def build_board(samples: list[dict], live_snap: dict = None) -> dict:
         live += 1
       live_people.update(host["users"])
       for user in host["users"]:
+        days_seen[user].add(day)
         if hour_of_day >= 23 or hour_of_day < 6:
           night_hours[user] += hours
+        if 6 <= hour_of_day < 9:
+          morning_hours[user] += hours
       # Sat on a machine chosen for its GPU, working the CPU instead.
       if host["gpu"] not in ("unknown", "no GPU"):
         for user, pct in (host.get("cpu") or {}).items():
@@ -566,10 +575,41 @@ def build_board(samples: list[dict], live_snap: dict = None) -> dict:
     else:
       free.append(host)
 
+  # When each person's current grip on each card began, without a break. Held
+  # here rather than further down because the standings want it too.
+  claimed_at: dict[tuple, int] = {}
+  holding: dict[str, set] = {}
+  for snap in recent:
+    for host in snap["hosts"]:
+      if host["state"] != "up":
+        continue
+      current_users = set(host["users"])
+      for user in current_users - holding.get(host["host"], set()):
+        claimed_at[(host["host"], user)] = snap["t"]
+      holding[host["host"]] = current_users
+
+  window_start = recent[0]["t"] if recent else now
+
+  def sitting(user: str) -> dict:
+    """Their longest unbroken grip on one card, as of right now.
+
+    A hold that began before this window looks like it began when the window
+    did, so the figure is a floor rather than a guess — said plainly, since
+    the page shows a start time.
+    """
+    starts = [claimed_at.get((h, user)) for h in live_users.get(user, [])]
+    starts = [s for s in starts if s]
+    if not starts:
+      return {}
+    since = min(starts)
+    return {"since": since, "floor": since <= window_start}
+
   leaderboard = [
-    {"user": handle_for(user), "hours": round(hours, 2),
-     "live": len(live_users.get(user, [])),
-     "night": round(night_hours.get(user, 0.0), 2)}
+    dict({"user": handle_for(user), "hours": round(hours, 2),
+          "live": len(live_users.get(user, [])),
+          "night": round(night_hours.get(user, 0.0), 2),
+          "morning": round(morning_hours.get(user, 0.0), 2),
+          "days": len(days_seen.get(user, ()))}, **sitting(user))
     for user, hours in sorted(gpu_hours.items(), key=lambda kv: -kv[1])
   ]
   utilisation = [
@@ -597,17 +637,6 @@ def build_board(samples: list[dict], live_snap: dict = None) -> dict:
       if key == "squatters":
         row["cards"] = len(live_users.get(row["user"], []))
       row["user"] = handle_for(row["user"])
-
-  claimed_at: dict[tuple, int] = {}
-  holding: dict[str, set] = {}
-  for snap in recent:
-    for host in snap["hosts"]:
-      if host["state"] != "up":
-        continue
-      current_users = set(host["users"])
-      for user in current_users - holding.get(host["host"], set()):
-        claimed_at[(host["host"], user)] = snap["t"]
-      holding[host["host"]] = current_users
 
   def arrivals(host: str, users: list[str]) -> list[dict]:
     ranked = sorted(users, key=lambda u: claimed_at.get((host, u), 0))
@@ -649,6 +678,7 @@ def build_board(samples: list[dict], live_snap: dict = None) -> dict:
     "contested": contested[:8],
     "gpu_awards": awards,
     "series": _series(recent),
+    "season_days": len(season_days),
     "window_hours": round((recent[-1]["t"] - recent[0]["t"]) / 3600.0, 2) if len(recent) > 1 else 0.0,
     "samples": len(recent),
     "leaderboard": leaderboard,
