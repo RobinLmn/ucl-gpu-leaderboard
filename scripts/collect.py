@@ -59,6 +59,7 @@ def handle_for(user: str) -> str:
 
 MAX_GAP_SECONDS = 20 * 60
 GATECRASH_UTIL = 15
+LEAK_MB = 500
 WEEK_SECONDS = 7 * 24 * 3600
 
 PROBE = r"""
@@ -290,6 +291,8 @@ def build_board(samples: list[dict]) -> dict:
   restarts: dict[str, int] = defaultdict(int)
   seen_on: dict[str, set] = defaultdict(set)
   user_on_host: dict[tuple, float] = defaultdict(float)
+  leak_hours: dict[str, float] = defaultdict(float)
+  leak_mem: dict[str, int] = defaultdict(int)
   for previous, current in zip(recent, recent[1:]):
     gap = current["t"] - previous["t"]
     if gap <= 0 or gap > MAX_GAP_SECONDS:
@@ -303,6 +306,9 @@ def build_board(samples: list[dict]) -> dict:
         continue
       if before["state"] != "up" or (before["users"] and not host["users"]):
         restarts[host["host"]] += 1
+      if not host["users"] and host["mem"] >= LEAK_MB:
+        leak_hours[host["host"]] += gap / 3600.0
+        leak_mem[host["host"]] = max(leak_mem[host["host"]], host["mem"])
       for user in host["users"]:
         seen_on[host["host"]].add(user)
         user_on_host[(host["host"], user)] += gap / 3600.0
@@ -315,6 +321,10 @@ def build_board(samples: list[dict]) -> dict:
     host, count = max(restarts.items(), key=lambda kv: (kv[1], kv[0]))
     if count:
       awards["unstable"] = _award(host, {"restarts": count})
+  if leak_hours:
+    host = max(leak_hours, key=lambda h: (leak_hours[h], leak_mem[h]))
+    awards["forgotten"] = _award(host, {"mem": leak_mem[host],
+                                        "hours": round(leak_hours[host], 1)})
   visited = {h: len(u) for h, u in seen_on.items() if u}
   if visited:
     busy_h = lambda h: host_busy.get(h, 0.0)
