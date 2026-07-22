@@ -61,6 +61,7 @@ WEEK_SECONDS = 7 * 24 * 3600
 
 PROBE = r"""
 echo REACHED
+echo "TIME|$(date +%s)"
 nvidia-smi --query-gpu=name,memory.used,memory.total,utilization.gpu --format=csv,noheader 2>/dev/null | head -1 | sed 's/^/GPU|/'
 nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader 2>/dev/null | while IFS=, read -r pid mem; do
   pid=$(echo $pid | tr -d ' ')
@@ -88,7 +89,7 @@ def probe(host: str, tries: int = 2) -> dict:
   for _ in range(tries):
     out = ssh(host, PROBE)
     if "REACHED" in out:
-      gpu, users, mem, util = "unknown", [], 0, 0
+      gpu, users, mem, util, clock = "unknown", [], 0, 0, 0
       for line in out.splitlines():
         if line.startswith("GPU|"):
           parts = [p.strip() for p in line[4:].split(",")]
@@ -97,17 +98,31 @@ def probe(host: str, tries: int = 2) -> dict:
           if len(parts) >= 4:
             mem = int(parts[1].split()[0])
             util = int(parts[3].split()[0])
+        elif line.startswith("TIME|"):
+          clock = int(line[5:].strip() or 0)
         elif line.startswith("PROC|"):
           _, user, _ = (line.split("|") + ["", ""])[:3]
           users.append(user)
       return {"host": host, "state": "up", "gpu": gpu,
-              "users": sorted(set(users)), "mem": mem, "util": util}
-  return {"host": host, "state": "unreachable", "gpu": "unknown", "users": [], "mem": 0, "util": 0}
+              "users": sorted(set(users)), "mem": mem, "util": util, "clock": clock}
+  return {"host": host, "state": "unreachable", "gpu": "unknown", "users": [], "mem": 0, "util": 0, "clock": 0}
+
+def cluster_time(hosts: list[dict]) -> int:
+  """Median clock across reachable machines, falling back to the local one.
+
+  The collector runs on whatever laptop is awake, and a laptop whose clock has
+  drifted would stamp the whole history wrong. The lab machines are NTP-synced.
+  """
+  clocks = sorted(h["clock"] for h in hosts if h.get("clock"))
+  return clocks[len(clocks) // 2] if clocks else int(time.time())
 
 def sample() -> dict:
   with futures.ThreadPoolExecutor(max_workers=14) as pool:
     hosts = list(pool.map(probe, HOSTS))
-  return {"t": int(time.time()), "hosts": hosts}
+  t = cluster_time(hosts)
+  for h in hosts:
+    h.pop("clock", None)
+  return {"t": t, "hosts": hosts}
 
 def _events(recent: list[dict]) -> dict:
   free_since: dict[str, int] = {}        # host -> when it last became free
@@ -172,7 +187,7 @@ def _events(recent: list[dict]) -> dict:
   }
 
 def build_board(samples: list[dict]) -> dict:
-  now = int(time.time())
+  now = samples[-1]["t"] if samples else int(time.time())
   recent = [s for s in samples if now - s["t"] <= WEEK_SECONDS]
   latest = samples[-1] if samples else {"t": now, "hosts": []}
 

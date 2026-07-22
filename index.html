@@ -93,7 +93,7 @@
 
   <div class="tiles" id="tiles"></div>
 
-  <h2>🏆 Podium — GPU-hours in the tracking window</h2>
+  <h2 title="Everything is measured over a rolling 7-day window. The board only knows what it has sampled, so until it has been collecting for a week the window is however long it has been running — shown next to the title.">🏆 Podium — GPU-hours over <span id="windowlabel">the tracking window</span></h2>
   <div class="podium" id="podium"></div>
 
   <h2>📊 Full standings</h2>
@@ -179,6 +179,11 @@ function render(b){
   };
 
   const medals = ["🥇","🥈","🥉"], cls = ["p1","p2","p3"];
+  const wh = b.window_hours;
+  document.getElementById("windowlabel").textContent =
+    wh >= 48 ? `the last ${Math.round(wh/24)} days`
+    : wh >= 1.5 ? `the last ${Math.round(wh)} hours`
+    : `the last ${Math.max(1, Math.round(wh*60))} min`;
   document.getElementById("podium").innerHTML = lb.slice(0,3).map((r,i) =>
     `<div class="plinth ${cls[i]}"><div class="medal">${medals[i]}</div>
      <div class="who">${r.user}</div>
