@@ -180,6 +180,13 @@ function render(b){
   };
 
   const medals = ["🥇","🥈","🥉"], cls = ["p1","p2","p3"];
+  const holdings = {};
+  for (const h of b.live.busy)
+    for (const u of h.users) (holdings[u] ||= []).push(`${h.host} (${h.gpu})`);
+  const heldBy = u => holdings[u]
+    ? `${u} is on ${holdings[u].length} card${holdings[u].length > 1 ? "s" : ""} right now:\n· ${holdings[u].join("\n· ")}`
+    : `${u} has nothing running right now.`;
+
   const wh = b.window_hours;
   document.getElementById("windowlabel").textContent =
     wh >= 48 ? `the last ${Math.round(wh/24)} days`
@@ -190,13 +197,6 @@ function render(b){
      <div class="who" title="${heldBy(r.user)}">${r.user}</div>
      <div class="hrs">${fmt(r.hours)} gpu-h · ${r.live} live now</div></div>`).join("")
     || `<div class="plinth"><div class="hrs">no data yet — the collector has just started</div></div>`;
-
-  const holdings = {};
-  for (const h of b.live.busy)
-    for (const u of h.users) (holdings[u] ||= []).push(`${h.host} (${h.gpu})`);
-  const heldBy = u => holdings[u]
-    ? `${u} is on ${holdings[u].length} card${holdings[u].length > 1 ? "s" : ""} right now:\n· ${holdings[u].join("\n· ")}`
-    : `${u} has nothing running right now.`;
 
   const max = Math.max(...lb.map(r => r.hours), 1);
   document.getElementById("rows").innerHTML = lb.map((r,i) => `
