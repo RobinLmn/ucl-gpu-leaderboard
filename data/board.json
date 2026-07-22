@@ -1,5 +1,5 @@
 {
- "generated": 1784742149,
+ "generated": 1784742384,
  "season": {
   "n": 1,
   "start": 1784737170,
@@ -15,6 +15,10 @@
    {
     "user": "SpectralWarlock",
     "seconds": 480
+   },
+   {
+    "user": "FeralBasilisk",
+    "seconds": 851
    }
   ],
   "longest_hold": [
@@ -43,7 +47,7 @@
   "squatters": [
    {
     "user": "RogueHeron",
-    "util": 14.5,
+    "util": 14.2,
     "cards": 1
    },
    {
@@ -53,13 +57,13 @@
    },
    {
     "user": "SpectralBasilisk",
-    "util": 63.8,
+    "util": 60.4,
     "cards": 1
    },
    {
     "user": "SpectralWarlock",
-    "util": 72.1,
-    "cards": 15
+    "util": 72.3,
+    "cards": 12
    },
    {
     "user": "NocturnalBasilisk",
@@ -286,42 +290,74 @@
    ]
   }
  ],
- "window_hours": 1.38,
- "samples": 39,
+ "gpu_awards": {
+  "unstable": {
+   "restarts": 5,
+   "host": "mackerel-l",
+   "gpu": "RTX 4070 Ti S"
+  },
+  "crowded": {
+   "users": 3,
+   "hours": 1.3,
+   "host": "shelduck-l",
+   "gpu": "RTX 3090 Ti"
+  },
+  "exclusive": {
+   "users": 1,
+   "hours": 1.3,
+   "host": "aylesbury-l",
+   "gpu": "RTX 3090 Ti"
+  },
+  "loyal": {
+   "user": "SpectralBasilisk",
+   "share": 100,
+   "hours": 1.3,
+   "host": "aylesbury-l",
+   "gpu": "RTX 3090 Ti"
+  }
+ },
+ "window_hours": 1.45,
+ "samples": 41,
  "leaderboard": [
   {
    "user": "SpectralWarlock",
-   "hours": 21.38,
-   "live": 15,
+   "hours": 22.22,
+   "live": 12,
    "night": 0.0
   },
   {
    "user": "TurboPhantom",
-   "hours": 8.96,
-   "live": 9,
+   "hours": 9.52,
+   "live": 8,
    "night": 0.0
   },
   {
    "user": "SpectralKraken",
-   "hours": 4.05,
+   "hours": 4.25,
    "live": 3,
    "night": 0.0
   },
   {
    "user": "NocturnalBasilisk",
-   "hours": 2.45,
+   "hours": 2.58,
    "live": 2,
    "night": 0.0
   },
   {
    "user": "SilentOtter",
-   "hours": 2.36,
+   "hours": 2.56,
    "live": 3,
    "night": 0.0
   },
   {
    "user": "RadiantBadger",
-   "hours": 2.24,
+   "hours": 2.31,
+   "live": 1,
+   "night": 0.0
+  },
+  {
+   "user": "SpectralBasilisk",
+   "hours": 1.32,
    "live": 1,
    "night": 0.0
   },
@@ -332,44 +368,38 @@
    "night": 0.0
   },
   {
-   "user": "SpectralBasilisk",
+   "user": "RogueYak",
    "hours": 1.26,
    "live": 1,
    "night": 0.0
   },
   {
    "user": "SleeplessWizard",
-   "hours": 1.22,
-   "live": 1,
-   "night": 0.0
-  },
-  {
-   "user": "RogueYak",
-   "hours": 1.19,
+   "hours": 1.25,
    "live": 1,
    "night": 0.0
   },
   {
    "user": "CaffeinatedGremlin",
-   "hours": 1.17,
+   "hours": 1.23,
    "live": 1,
    "night": 0.0
   },
   {
    "user": "RogueHeron",
-   "hours": 1.16,
+   "hours": 1.23,
    "live": 1,
    "night": 0.0
   },
   {
    "user": "CursedBadger",
-   "hours": 1.14,
+   "hours": 1.2,
    "live": 1,
    "night": 0.0
   },
   {
    "user": "TurboYak",
-   "hours": 0.47,
+   "hours": 0.54,
    "live": 1,
    "night": 0.0
   },
@@ -387,8 +417,8 @@
   },
   {
    "user": "FeralBasilisk",
-   "hours": 0.07,
-   "live": 0,
+   "hours": 0.1,
+   "live": 1,
    "night": 0.0
   }
  ],
@@ -396,47 +426,87 @@
   "free": [
    {
     "host": "eider-l",
-    "gpu": "no GPU"
+    "gpu": "no GPU",
+    "mem": 0,
+    "mem_total": 0,
+    "util": 0
    },
    {
     "host": "pintail-l",
-    "gpu": "RTX 3090 Ti"
-   },
-   {
-    "host": "scoter-l",
-    "gpu": "RTX 3090 Ti"
+    "gpu": "RTX 3090 Ti",
+    "mem": 4,
+    "mem_total": 24564,
+    "util": 0
    },
    {
     "host": "elver-l",
-    "gpu": "RTX 4070 Ti S"
+    "gpu": "RTX 4070 Ti S",
+    "mem": 145,
+    "mem_total": 16376,
+    "util": 0
+   },
+   {
+    "host": "inanga-l",
+    "gpu": "RTX 4070 Ti S",
+    "mem": 141,
+    "mem_total": 16376,
+    "util": 0
    },
    {
     "host": "mullet-l",
-    "gpu": "RTX 4070 Ti S"
+    "gpu": "RTX 4070 Ti S",
+    "mem": 141,
+    "mem_total": 16376,
+    "util": 0
    },
    {
     "host": "plaice-l",
-    "gpu": "RTX 4070 Ti S"
+    "gpu": "RTX 4070 Ti S",
+    "mem": 358,
+    "mem_total": 16376,
+    "util": 0
    },
    {
     "host": "roach-l",
-    "gpu": "RTX 4070 Ti S"
+    "gpu": "RTX 4070 Ti S",
+    "mem": 145,
+    "mem_total": 16376,
+    "util": 0
    },
    {
     "host": "rudd-l",
-    "gpu": "RTX 4070 Ti S"
+    "gpu": "RTX 4070 Ti S",
+    "mem": 141,
+    "mem_total": 16376,
+    "util": 0
    },
    {
     "host": "shark-l",
-    "gpu": "RTX 4070 Ti S"
+    "gpu": "RTX 4070 Ti S",
+    "mem": 141,
+    "mem_total": 16376,
+    "util": 0
+   },
+   {
+    "host": "uaru-l",
+    "gpu": "RTX 4070 Ti S",
+    "mem": 188,
+    "mem_total": 16376,
+    "util": 0
    },
    {
     "host": "whitebait-l",
-    "gpu": "no GPU"
+    "gpu": "no GPU",
+    "mem": 0,
+    "mem_total": 0,
+    "util": 0
    },
    {
     "host": "zander-l",
-    "gpu": "RTX 4070 Ti S"
+    "gpu": "RTX 4070 Ti S",
+    "mem": 141,
+    "mem_total": 16376,
+    "util": 0
    }
   ],
   "busy": [
@@ -447,7 +517,8 @@
      "SpectralBasilisk"
     ],
     "mem": 21995,
-    "util": 94
+    "mem_total": 24564,
+    "util": 0
    },
    {
     "host": "barnacle-l",
@@ -456,6 +527,7 @@
      "TurboPhantom"
     ],
     "mem": 3014,
+    "mem_total": 24564,
     "util": 98
    },
    {
@@ -464,8 +536,9 @@
     "users": [
      "SpectralWarlock"
     ],
-    "mem": 570,
-    "util": 85
+    "mem": 565,
+    "mem_total": 24564,
+    "util": 40
    },
    {
     "host": "crested-l",
@@ -474,7 +547,8 @@
      "TurboPhantom"
     ],
     "mem": 7336,
-    "util": 99
+    "mem_total": 24564,
+    "util": 100
    },
    {
     "host": "gadwall-l",
@@ -484,7 +558,8 @@
      "SpectralKraken"
     ],
     "mem": 17500,
-    "util": 99
+    "mem_total": 24564,
+    "util": 98
    },
    {
     "host": "goosander-l",
@@ -494,6 +569,7 @@
      "SpectralWarlock"
     ],
     "mem": 23699,
+    "mem_total": 24564,
     "util": 100
    },
    {
@@ -504,7 +580,8 @@
      "SpectralWarlock"
     ],
     "mem": 21796,
-    "util": 90
+    "mem_total": 24564,
+    "util": 100
    },
    {
     "host": "harlequin-l",
@@ -513,7 +590,8 @@
      "SpectralKraken"
     ],
     "mem": 17559,
-    "util": 87
+    "mem_total": 24564,
+    "util": 82
    },
    {
     "host": "mandarin-l",
@@ -522,7 +600,8 @@
      "NocturnalBasilisk"
     ],
     "mem": 18091,
-    "util": 73
+    "mem_total": 24564,
+    "util": 67
    },
    {
     "host": "ruddy-l",
@@ -531,7 +610,8 @@
      "SpectralKraken"
     ],
     "mem": 15990,
-    "util": 83
+    "mem_total": 24564,
+    "util": 82
    },
    {
     "host": "scaup-l",
@@ -540,7 +620,18 @@
      "TurboPhantom"
     ],
     "mem": 7847,
+    "mem_total": 24564,
     "util": 100
+   },
+   {
+    "host": "scoter-l",
+    "gpu": "RTX 3090 Ti",
+    "users": [
+     "FeralBasilisk"
+    ],
+    "mem": 16089,
+    "mem_total": 24564,
+    "util": 1
    },
    {
     "host": "shelduck-l",
@@ -550,7 +641,8 @@
      "TurboPhantom"
     ],
     "mem": 7957,
-    "util": 100
+    "mem_total": 24564,
+    "util": 98
    },
    {
     "host": "shoveler-l",
@@ -560,7 +652,8 @@
      "TurboPhantom"
     ],
     "mem": 23783,
-    "util": 99
+    "mem_total": 24564,
+    "util": 100
    },
    {
     "host": "smew-l",
@@ -569,7 +662,8 @@
      "NocturnalBasilisk"
     ],
     "mem": 18657,
-    "util": 93
+    "mem_total": 24564,
+    "util": 92
    },
    {
     "host": "wigeon-l",
@@ -579,7 +673,8 @@
      "SpectralWarlock"
     ],
     "mem": 7386,
-    "util": 97
+    "mem_total": 24564,
+    "util": 95
    },
    {
     "host": "albacore-l",
@@ -588,6 +683,7 @@
      "TurboPhantom"
     ],
     "mem": 10409,
+    "mem_total": 16376,
     "util": 100
    },
    {
@@ -597,6 +693,7 @@
      "SpectralWarlock"
     ],
     "mem": 1298,
+    "mem_total": 16376,
     "util": 97
    },
    {
@@ -606,6 +703,7 @@
      "SpectralWarlock"
     ],
     "mem": 1186,
+    "mem_total": 16376,
     "util": 97
    },
    {
@@ -615,33 +713,7 @@
      "TurboPhantom"
     ],
     "mem": 10378,
-    "util": 100
-   },
-   {
-    "host": "goldeye-l",
-    "gpu": "RTX 4070 Ti S",
-    "users": [
-     "SpectralWarlock"
-    ],
-    "mem": 603,
-    "util": 25
-   },
-   {
-    "host": "hake-l",
-    "gpu": "RTX 4070 Ti S",
-    "users": [
-     "SpectralWarlock"
-    ],
-    "mem": 950,
-    "util": 62
-   },
-   {
-    "host": "javelin-l",
-    "gpu": "RTX 4070 Ti S",
-    "users": [
-     "TurboPhantom"
-    ],
-    "mem": 10291,
+    "mem_total": 16376,
     "util": 100
    },
    {
@@ -652,7 +724,8 @@
      "TurboPhantom"
     ],
     "mem": 14423,
-    "util": 93
+    "mem_total": 16376,
+    "util": 99
    },
    {
     "host": "lamprey-l",
@@ -661,7 +734,8 @@
      "SpectralWarlock"
     ],
     "mem": 950,
-    "util": 70
+    "mem_total": 16376,
+    "util": 62
    },
    {
     "host": "mackerel-l",
@@ -670,7 +744,8 @@
      "SpectralWarlock"
     ],
     "mem": 950,
-    "util": 62
+    "mem_total": 16376,
+    "util": 61
    },
    {
     "host": "nase-l",
@@ -679,7 +754,8 @@
      "SpectralWarlock"
     ],
     "mem": 1116,
-    "util": 89
+    "mem_total": 16376,
+    "util": 88
    },
    {
     "host": "opah-l",
@@ -688,7 +764,8 @@
      "SpectralWarlock"
     ],
     "mem": 525,
-    "util": 50
+    "mem_total": 16376,
+    "util": 9
    },
    {
     "host": "pike-l",
@@ -697,7 +774,8 @@
      "RadiantBadger"
     ],
     "mem": 8421,
-    "util": 98
+    "mem_total": 16376,
+    "util": 84
    },
    {
     "host": "quillback-l",
@@ -706,6 +784,7 @@
      "SilentOtter"
     ],
     "mem": 12753,
+    "mem_total": 16376,
     "util": 100
    },
    {
@@ -715,6 +794,7 @@
      "SilentOtter"
     ],
     "mem": 12894,
+    "mem_total": 16376,
     "util": 100
    },
    {
@@ -724,16 +804,8 @@
      "SilentOtter"
     ],
     "mem": 12753,
-    "util": 80
-   },
-   {
-    "host": "vimba-l",
-    "gpu": "RTX 4070 Ti S",
-    "users": [
-     "SpectralWarlock"
-    ],
-    "mem": 591,
-    "util": 9
+    "mem_total": 16376,
+    "util": 100
    },
    {
     "host": "yellowtail-l",
@@ -742,6 +814,7 @@
      "RogueHeron"
     ],
     "mem": 1642,
+    "mem_total": 16376,
     "util": 16
    }
   ],
@@ -753,9 +826,11 @@
    "pocher-l",
    "barbel-l",
    "cripps-l",
-   "inanga-l",
+   "goldeye-l",
+   "hake-l",
+   "javelin-l",
    "tench-l",
-   "uaru-l",
+   "vimba-l",
    "barbury-l"
   ]
  },
@@ -764,7 +839,7 @@
    "host": "albacore-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 100.0,
-   "hours": 1.2
+   "hours": 1.3
   },
   {
    "host": "aylesbury-l",
@@ -794,7 +869,7 @@
    "host": "flounder-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 100.0,
-   "hours": 1.2
+   "hours": 1.3
   },
   {
    "host": "gadwall-l",
@@ -806,7 +881,7 @@
    "host": "goldeye-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 100.0,
-   "hours": 1.2
+   "hours": 1.3
   },
   {
    "host": "goosander-l",
@@ -818,19 +893,19 @@
    "host": "gressingham-l",
    "gpu": "RTX 3090 Ti",
    "busy_pct": 100.0,
-   "hours": 1.2
+   "hours": 1.3
   },
   {
    "host": "hake-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 100.0,
-   "hours": 1.2
+   "hours": 1.3
   },
   {
    "host": "harlequin-l",
    "gpu": "RTX 3090 Ti",
    "busy_pct": 100.0,
-   "hours": 1.1
+   "hours": 1.2
   },
   {
    "host": "javelin-l",
@@ -842,7 +917,7 @@
    "host": "koi-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 100.0,
-   "hours": 1.1
+   "hours": 1.2
   },
   {
    "host": "lamprey-l",
@@ -854,7 +929,7 @@
    "host": "mackerel-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 100.0,
-   "hours": 1.1
+   "hours": 1.2
   },
   {
    "host": "mandarin-l",
@@ -884,7 +959,7 @@
    "host": "quillback-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 100.0,
-   "hours": 1.2
+   "hours": 1.3
   },
   {
    "host": "ruddy-l",
@@ -902,7 +977,7 @@
    "host": "skate-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 100.0,
-   "hours": 1.2
+   "hours": 1.3
   },
   {
    "host": "smew-l",
@@ -914,7 +989,7 @@
    "host": "tope-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 100.0,
-   "hours": 1.2
+   "hours": 1.3
   },
   {
    "host": "vimba-l",
@@ -935,64 +1010,64 @@
    "hours": 1.2
   },
   {
-   "host": "pintail-l",
-   "gpu": "RTX 3090 Ti",
-   "busy_pct": 96.8,
-   "hours": 1.2
-  },
-  {
    "host": "barnacle-l",
    "gpu": "RTX 3090 Ti",
-   "busy_pct": 95.4,
+   "busy_pct": 95.6,
    "hours": 1.3
   },
   {
    "host": "brent-l",
    "gpu": "RTX 3090 Ti",
-   "busy_pct": 91.9,
+   "busy_pct": 92.3,
+   "hours": 1.3
+  },
+  {
+   "host": "pintail-l",
+   "gpu": "RTX 3090 Ti",
+   "busy_pct": 91.7,
    "hours": 1.2
   },
   {
    "host": "scaup-l",
    "gpu": "RTX 3090 Ti",
-   "busy_pct": 81.5,
+   "busy_pct": 82.4,
    "hours": 1.3
   },
   {
    "host": "shoveler-l",
    "gpu": "RTX 3090 Ti",
-   "busy_pct": 75.3,
-   "hours": 1.2
+   "busy_pct": 76.6,
+   "hours": 1.3
   },
   {
    "host": "crested-l",
    "gpu": "RTX 3090 Ti",
-   "busy_pct": 64.5,
+   "busy_pct": 66.2,
+   "hours": 1.3
+  },
+  {
+   "host": "scoter-l",
+   "gpu": "RTX 3090 Ti",
+   "busy_pct": 55.0,
    "hours": 1.3
   },
   {
    "host": "inanga-l",
    "gpu": "RTX 4070 Ti S",
-   "busy_pct": 56.3,
-   "hours": 1.2
-  },
-  {
-   "host": "scoter-l",
-   "gpu": "RTX 3090 Ti",
-   "busy_pct": 55.3,
+   "busy_pct": 53.4,
    "hours": 1.3
   },
   {
    "host": "roach-l",
    "gpu": "RTX 4070 Ti S",
-   "busy_pct": 54.4,
+   "busy_pct": 51.7,
    "hours": 1.3
   },
   {
    "host": "eider-l",
    "gpu": "no GPU",
    "busy_pct": 0.0,
-   "hours": 1.2
+   "hours": 1.3
   },
   {
    "host": "elver-l",
@@ -1022,25 +1097,25 @@
    "host": "shark-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 0.0,
-   "hours": 1.2
+   "hours": 1.3
   },
   {
    "host": "uaru-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 0.0,
-   "hours": 1.1
+   "hours": 1.2
   },
   {
    "host": "whitebait-l",
    "gpu": "no GPU",
    "busy_pct": 0.0,
-   "hours": 1.2
+   "hours": 1.3
   },
   {
    "host": "zander-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 0.0,
-   "hours": 1.2
+   "hours": 1.3
   }
  ],
  "peak": {
