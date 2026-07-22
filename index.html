@@ -70,7 +70,7 @@
   .node .u{color:var(--muted);margin-top:4px;font-size:10px;line-height:1.35;
            overflow-wrap:anywhere;word-break:break-all}
 
-  .trophies{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .trophies{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
   .trophy{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
   .trophy .t{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
   .trophy .w{font-size:16px;font-weight:700;margin:7px 0 3px;overflow-wrap:anywhere}
@@ -242,6 +242,9 @@ function render(b){
     ["🛋️ Prime Squatter", "squatters", r => r.user,
      r => `${r.util}% util on ${r.cards ?? 0} card${r.cards === 1 ? "" : "s"}`,
      "holds cards while barely using them — the true villain"],
+    ["🏔️ Record Hoard", "biggest_hoard", r => r.user,
+     r => `${r.cards} cards at once`,
+     "most GPUs held simultaneously by one person"],
     ["🥷 The Gatecrasher", "gatecrasher", r => r.user,
      r => `${r.count} time${r.count === 1 ? "" : "s"}`,
      "jumped onto a card someone else was already using"],

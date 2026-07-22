@@ -207,6 +207,19 @@ def build_board(samples: list[dict]) -> dict:
     if len(live_people) > peak["users"]:
       peak = {"gpus": live, "users": len(live_people), "t": current["t"]}
 
+  hoard: dict[str, int] = defaultdict(int)
+  hoard_when: dict[str, int] = {}
+  for snap in recent:
+    per_user: dict[str, int] = defaultdict(int)
+    for host in snap["hosts"]:
+      if host["state"] == "up":
+        for u in host["users"]:
+          per_user[u] += 1
+    for u, n in per_user.items():
+      if n > hoard[u]:
+        hoard[u] = n
+        hoard_when[u] = snap["t"]
+
   share_peak: dict[str, int] = defaultdict(int)
   share_who: dict[str, list[str]] = {}
   for snap in recent:
@@ -241,7 +254,10 @@ def build_board(samples: list[dict]) -> dict:
   utilisation.sort(key=lambda r: -r["busy_pct"])
 
   ev = _events(recent)
-  for key in ("quickest_draw", "longest_hold", "reboot_rush", "squatters", "gatecrasher"):
+  ev["biggest_hoard"] = [{"user": u, "cards": n, "t": hoard_when.get(u)}
+                         for u, n in sorted(hoard.items(), key=lambda kv: -kv[1])[:5]]
+  for key in ("quickest_draw", "longest_hold", "reboot_rush", "squatters", "gatecrasher",
+              "biggest_hoard"):
     for row in ev[key]:
       if key == "squatters":
         row["cards"] = len(live_users.get(row["user"], []))
