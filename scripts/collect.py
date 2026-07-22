@@ -138,8 +138,7 @@ def _events(recent: list[dict]) -> dict:
   holds: dict[str, float] = defaultdict(float)           # user -> longest single hold (h)
   idle_util: dict[str, list[float]] = defaultdict(list)  # user -> util% while holding
   reboot_claims: dict[str, int] = defaultdict(int)       # user -> cards taken post-reboot
-  flips: dict[str, int] = defaultdict(int)
-  gatecrash: dict[str, int] = defaultdict(int)               # host -> times it changed hands
+  gatecrash: dict[str, int] = defaultdict(int)           # user -> cards joined while occupied
 
   for previous, current in zip(recent, recent[1:]):
     if not (0 < current["t"] - previous["t"] <= MAX_GAP_SECONDS):
@@ -161,8 +160,9 @@ def _events(recent: list[dict]) -> dict:
         free_since.setdefault(name, when)
       if old_users and not users:            # released
         free_since[name] = when
-        flips[name] += 1
       for user in users - old_users:         # claimed
+        if old_users:                        # someone was already on it
+          gatecrash[user] += 1
         if name in free_since:
           draws[user].append(max(0, when - free_since[name]))
         if post_reboot:
