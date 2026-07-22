@@ -38,6 +38,12 @@
   h2{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);
      margin:30px 0 12px;border-bottom:1px solid var(--line);padding-bottom:7px}
 
+  .champ{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:14px;
+    padding:14px 18px;margin:18px 0 4px;background:linear-gradient(90deg,rgba(255,196,0,.10),transparent)}
+  .champ .crown{font-size:30px;line-height:1}
+  .champ .t{font-size:12px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .champ .n{font-size:19px;font-weight:700;word-break:break-all}
+  .champ .s{margin-left:auto;text-align:right;color:var(--muted);font-size:13px;flex:none}
   .podium{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:end}
   .plinth{background:var(--panel);border:1px solid var(--line);border-radius:12px;
           padding:16px 10px;text-align:center;position:relative;min-width:0}
@@ -94,7 +100,9 @@
 
   <div class="tiles" id="tiles"></div>
 
-  <h2 title="Everything is measured over a rolling 7-day window. The board only knows what it has sampled, so until it has been collecting for a week the window is however long it has been running — shown next to the title.">🏆 Podium — GPU-hours over <span id="windowlabel">the tracking window</span></h2>
+  <div id="champion"></div>
+
+  <h2 title="The board runs in weekly seasons. Standings reset to zero when the season ends, and the leader at that moment is crowned and archived.">🏆 Podium — <span id="windowlabel">this season</span></h2>
   <div class="podium" id="podium"></div>
 
   <h2>📊 Full standings</h2>
@@ -187,11 +195,23 @@ function render(b){
     ? `${u} is on ${holdings[u].length} card${holdings[u].length > 1 ? "s" : ""} right now:\n· ${holdings[u].join("\n· ")}`
     : `${u} has nothing running right now.`;
 
-  const wh = b.window_hours;
+  const season = b.season || {n: 1, ends: 0, past: []};
+  const left = Math.max(0, (season.ends || 0) - b.generated);
+  const countdown = left >= 86400 ? `${Math.floor(left/86400)}d ${Math.floor(left%86400/3600)}h`
+    : left >= 3600 ? `${Math.floor(left/3600)}h ${Math.floor(left%3600/60)}m`
+    : `${Math.floor(left/60)}m`;
   document.getElementById("windowlabel").textContent =
-    wh >= 48 ? `the last ${Math.round(wh/24)} days`
-    : wh >= 1.5 ? `the last ${Math.round(wh)} hours`
-    : `the last ${Math.max(1, Math.round(wh*60))} min`;
+    `season ${season.n} · resets in ${countdown}`;
+
+  const last = (season.past || []).slice(-1)[0];
+  const crownTitle = k => k >= 4 ? `Dynasty &times;${k}` : k === 3 ? "Three-Peat Overlord"
+    : k === 2 ? "Back-to-Back Overlord" : "Overlord of the Week";
+  document.getElementById("champion").innerHTML = last && last.champion
+    ? `<div class="champ"><div class="crown">👑</div>
+         <div><div class="t">Season ${last.n} champion &mdash; ${crownTitle(last.streak)}</div>
+         <div class="n">${last.champion}</div></div>
+         <div class="s">${fmt(last.hours)} gpu-h<br>${last.streak > 1 ? last.streak + " seasons running" : "first crown"}</div></div>`
+    : "";
   document.getElementById("podium").innerHTML = lb.slice(0,3).map((r,i) =>
     `<div class="plinth ${cls[i]}"><div class="medal">${medals[i]}</div>
      <div class="who" title="${heldBy(r.user)}">${r.user}</div>

@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 HISTORY = ROOT / "data" / "history.jsonl"
 BOARD = ROOT / "data" / "board.json"
 NAMES = ROOT / "data" / "names.local.json"
+SEASONS = ROOT / "data" / "seasons.json"
 
 HANDLE_ADJECTIVES = ["Feral", "Nocturnal", "Caffeinated", "Unhinged", "Sleepless", "Rogue",
                      "Turbo", "Silent", "Greedy", "Cursed", "Radiant", "Spectral"]
@@ -192,12 +193,52 @@ def _events(recent: list[dict]) -> dict:
                     for u, c in sorted(gatecrash.items(), key=lambda kv: -kv[1])[:5]],
   }
 
+def _gpu_hours(window: list[dict]) -> dict[str, float]:
+  hours: dict[str, float] = defaultdict(float)
+  for previous, current in zip(window, window[1:]):
+    gap = current["t"] - previous["t"]
+    if gap <= 0 or gap > MAX_GAP_SECONDS:
+      continue
+    for host in current["hosts"]:
+      if host["state"] == "up":
+        for user in host["users"]:
+          hours[user] += gap / 3600.0
+  return hours
+
+def season_state(now: int, samples: list[dict]) -> dict:
+  state = json.loads(SEASONS.read_text()) if SEASONS.exists() else {}
+  anchor = state.setdefault("anchor", samples[0]["t"] if samples else now)
+  past = state.setdefault("past", [])
+  index = max(0, (now - anchor) // WEEK_SECONDS)
+
+  while len(past) < index:
+    start = anchor + len(past) * WEEK_SECONDS
+    window = [s for s in samples if start <= s["t"] < start + WEEK_SECONDS]
+    ranked = sorted(_gpu_hours(window).items(), key=lambda kv: -kv[1])
+    champion = handle_for(ranked[0][0]) if ranked else None
+    streak = 0
+    if champion:
+      streak = 1
+      for previous in reversed(past):
+        if previous.get("champion") != champion:
+          break
+        streak += 1
+    past.append({"n": len(past) + 1, "start": start, "end": start + WEEK_SECONDS,
+                 "champion": champion, "hours": round(ranked[0][1], 2) if ranked else 0.0,
+                 "streak": streak})
+
+  SEASONS.parent.mkdir(parents=True, exist_ok=True)
+  SEASONS.write_text(json.dumps(state, indent=1))
+  return {"anchor": anchor, "index": index, "past": past}
+
 def build_board(samples: list[dict]) -> dict:
   now = samples[-1]["t"] if samples else int(time.time())
-  recent = [s for s in samples if now - s["t"] <= WEEK_SECONDS]
+  season = season_state(now, samples)
+  season_start = season["anchor"] + season["index"] * WEEK_SECONDS
+  recent = [s for s in samples if s["t"] >= season_start]
   latest = samples[-1] if samples else {"t": now, "hosts": []}
 
-  gpu_hours: dict[str, float] = defaultdict(float)
+  gpu_hours = _gpu_hours(recent)
   host_busy: dict[str, float] = defaultdict(float)
   host_total: dict[str, float] = defaultdict(float)
   host_model: dict[str, str] = {}
@@ -222,7 +263,6 @@ def build_board(samples: list[dict]) -> dict:
         live += 1
       live_people.update(host["users"])
       for user in host["users"]:
-        gpu_hours[user] += hours
         if hour_of_day >= 23 or hour_of_day < 6:
           night_hours[user] += hours
     if len(live_people) > peak["users"]:
@@ -295,6 +335,9 @@ def build_board(samples: list[dict]) -> dict:
 
   return {
     "generated": now,
+    "season": {"n": season["index"] + 1, "start": season_start,
+               "ends": season_start + WEEK_SECONDS,
+               "past": [dict(row) for row in season["past"][-6:]]},
     "trophies": ev,
     "contested": contested[:8],
     "window_hours": round((recent[-1]["t"] - recent[0]["t"]) / 3600.0, 2) if len(recent) > 1 else 0.0,

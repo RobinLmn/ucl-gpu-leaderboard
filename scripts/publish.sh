@@ -13,6 +13,6 @@ if git diff --quiet -- data/board.json 2>/dev/null; then
   exit 0
 fi
 
-git add index.html data/board.json scripts/ .gitignore 2>/dev/null || true
+git add index.html data/board.json data/seasons.json scripts/ .gitignore 2>/dev/null || true
 git commit -q -m "board: $(date -u '+%Y-%m-%d %H:%M UTC')" || true
 git push -q origin HEAD 2>/dev/null && echo "[publish] pushed" || echo "[publish] push failed (no remote yet?)"
