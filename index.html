@@ -78,37 +78,9 @@
   @media(max-width:720px){.two{grid-template-columns:1fr}.podium{grid-template-columns:1fr}}
   footer{margin-top:44px;color:var(--dim);font-size:11px;text-align:center;line-height:1.8}
   .scroll{overflow-x:auto}
-  .ic{width:1.05em;height:1.05em;vertical-align:-.16em;fill:none;stroke:currentColor;
-      stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
-  h2 .ic{width:14px;height:14px;margin-right:7px}
-  .badge .ic{width:12px;height:12px;margin-right:4px}
-  .trophy .t .ic{width:14px;height:14px;margin-right:6px}
-  .place{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;
-         justify-content:center;font-weight:700;font-size:13px;color:#0e1116}
-  .p1 .place{background:var(--gold)} .p2 .place{background:var(--silver)} .p3 .place{background:var(--bronze)}
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
- <defs>
-  <g id="i-trophy"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4v1a4 4 0 0 0 3 3.9M17 6h3v1a4 4 0 0 1-3 3.9"/><path d="M12 14v4M9 20h6"/></g>
-  <g id="i-list"><path d="M4 6h16M4 12h16M4 18h10"/></g>
-  <g id="i-award"><circle cx="12" cy="9" r="5"/><path d="M9 13.5 8 21l4-2 4 2-1-7.5"/></g>
-  <g id="i-flame"><path d="M12 3s5 4 5 8a5 5 0 0 1-10 0c0-2 1-3 2-4 0 1.5 1 2 1.5 2C11 8 12 6 12 3Z"/></g>
-  <g id="i-snow"><path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/></g>
-  <g id="i-grid"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></g>
-  <g id="i-crown"><path d="M3 8l3.5 3L12 5l5.5 6L21 8l-2 10H5L3 8Z"/></g>
-  <g id="i-moon"><path d="M20 14a8 8 0 1 1-9.5-10 6.5 6.5 0 0 0 9.5 10Z"/></g>
-  <g id="i-layers"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="M3 13l9 5 9-5"/></g>
-  <g id="i-ghost"><path d="M5 20V10a7 7 0 0 1 14 0v10l-2.5-2-2.5 2-2-2-2 2L7.5 18 5 20Z"/><circle cx="9.5" cy="10" r="1"/><circle cx="14.5" cy="10" r="1"/></g>
-  <g id="i-sprout"><path d="M12 21v-8"/><path d="M12 13C12 9 9 7 5 7c0 4 3 6 7 6Z"/><path d="M12 13c0-3 2-5 6-5 0 3-2 5-6 5Z"/></g>
-  <g id="i-bolt"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></g>
-  <g id="i-castle"><path d="M4 21V8l3 2 2-3 2 3 2-3 2 3 3-2v13H4Z"/><path d="M10 21v-4h4v4"/></g>
-  <g id="i-flag"><path d="M5 21V4"/><path d="M5 5h11l-2 3 2 3H5"/></g>
-  <g id="i-couch"><path d="M4 12V9a2 2 0 0 1 4 0v3M16 12V9a2 2 0 0 1 4 0v3"/><rect x="3" y="12" width="18" height="6" rx="2"/><path d="M7 18v2M17 18v2"/></g>
-  <g id="i-swap"><path d="M7 8h12l-3-3M17 16H5l3 3"/></g>
- </defs>
-</svg>
 <div class="wrap">
   <header>
     <h1>UCL GPU LEADERBOARD</h1>
@@ -118,10 +90,10 @@
 
   <div class="tiles" id="tiles"></div>
 
-  <h2><svg class="ic"><use href="#i-trophy"/></svg>Podium — GPU-hours in the tracking window</h2>
+  <h2>🏆 Podium — GPU-hours in the tracking window</h2>
   <div class="podium" id="podium"></div>
 
-  <h2><svg class="ic"><use href="#i-list"/></svg>Full standings</h2>
+  <h2>📊 Full standings</h2>
   <div class="scroll"><table id="board">
     <thead><tr>
       <th class="rank">#</th><th>challenger</th><th class="barcell">gpu-hours</th>
@@ -130,23 +102,23 @@
     <tbody id="rows"></tbody>
   </table></div>
 
-  <h2><svg class="ic"><use href="#i-award"/></svg>Trophy cabinet</h2>
+  <h2>🏅 Trophy cabinet</h2>
   <div class="trophies" id="trophies"></div>
 
   <div class="two">
     <div>
-      <h2><svg class="ic"><use href="#i-flame"/></svg>Most contested cards</h2>
+      <h2>🔥 Most contested cards</h2>
       <div class="scroll"><table>
         <thead><tr><th>card</th><th>sharing</th><th>who</th></tr></thead>
         <tbody id="hot"></tbody></table></div>
     </div>
     <div>
-      <h2><svg class="ic"><use href="#i-snow"/></svg>Loneliest cards</h2>
+      <h2>🧊 Loneliest cards</h2>
       <div class="scroll"><table><tbody id="cold"></tbody></table></div>
     </div>
   </div>
 
-  <h2><svg class="ic"><use href="#i-grid"/></svg>The lab, right now</h2>
+  <h2>🗺️ The lab, right now</h2>
   <div class="grid" id="map"></div>
 
   <footer>
@@ -166,20 +138,18 @@ function ago(ts){
   return Math.round(s/3600) + "h ago";
 }
 
-const ic = n => `<svg class="ic"><use href="#i-${n}"/></svg>`;
-
 function titles(row, best){
   const t = [];
   if (row.user === best.hours)
-    t.push(["crown", "GPU Overlord", "Most GPU-hours of anyone in the tracking window."]);
+    t.push(["👑", "GPU Overlord", "Most GPU-hours of anyone in the tracking window."]);
   if (row.user === best.night && row.night > 0.2)
-    t.push(["moon", "Night Owl", `Most GPU-hours between 23:00 and 06:00 (${row.night}h of theirs were overnight).`]);
+    t.push(["🦉", "Night Owl", `Most GPU-hours between 23:00 and 06:00 (${row.night}h of theirs were overnight).`]);
   if (row.user === best.live && row.live > 1)
-    t.push(["layers", "Octopus", `Holding the most cards at once right now (${row.live}).`]);
+    t.push(["🐙", "Octopus", `Holding the most cards at once right now (${row.live}).`]);
   if (row.live === 0 && row.hours > 0)
-    t.push(["ghost", "Ghost", "Has logged GPU-hours but has nothing running at the moment."]);
+    t.push(["👻", "Ghost", "Has logged GPU-hours but has nothing running at the moment."]);
   if (row.hours > 0 && row.hours < 1)
-    t.push(["sprout", "Tourist", "Under one GPU-hour in total. Just passing through."]);
+    t.push(["🐣", "Tourist", "Under one GPU-hour in total. Just passing through."]);
   return t;
 }
 
@@ -205,9 +175,9 @@ function render(b){
     live:  lb.slice().sort((a,b2)=>b2.live-a.live)[0]?.user,
   };
 
-  const cls = ["p1","p2","p3"];
+  const medals = ["🥇","🥈","🥉"], cls = ["p1","p2","p3"];
   document.getElementById("podium").innerHTML = lb.slice(0,3).map((r,i) =>
-    `<div class="plinth ${cls[i]}"><div class="place">${i+1}</div>
+    `<div class="plinth ${cls[i]}"><div class="medal">${medals[i]}</div>
      <div class="who">${r.user}</div>
      <div class="hrs">${fmt(r.hours)} gpu-h · ${r.live} live now</div></div>`).join("")
     || `<div class="plinth"><div class="hrs">no data yet — the collector has just started</div></div>`;
@@ -224,8 +194,8 @@ function render(b){
         </div>
       </td>
       <td>${r.live || "—"}</td>
-      <td>${titles(r, best).map(([i,l,d]) =>
-            `<span class="badge" title="${l} — ${d}">${ic(i)}${l}</span>`).join("") || "—"}</td>
+      <td>${titles(r, best).map(([e,l,d]) =>
+            `<span class="badge" title="${l} — ${d}">${e} ${l}</span>`).join("") || "—"}</td>
     </tr>`).join("")
     || `<tr><td colspan="5" style="color:var(--dim)">nothing recorded yet</td></tr>`;
 
@@ -260,15 +230,15 @@ function render(b){
 
   const secs = s => s < 90 ? `${s}s` : `${Math.round(s/60)} min`;
   const TROPHIES = [
-    [ic("bolt") + "Quickest Draw", "quickest_draw", r => `${r.user}`, r => `${secs(r.seconds)} after it freed`,
+    ["⚡ Quickest Draw", "quickest_draw", r => `${r.user}`, r => `${secs(r.seconds)} after it freed`,
      "smallest gap between a card being released and someone claiming it"],
-    [ic("castle") + "The Landlord", "longest_hold", r => r.user, r => `${r.hours}h unbroken`,
+    ["🏰 The Landlord", "longest_hold", r => r.user, r => `${r.hours}h unbroken`,
      "longest single stretch holding one card without letting go"],
-    [ic("flag") + "Reboot Rush", "reboot_rush", r => r.user, r => `${r.claims} cards claimed`,
+    ["🏁 Reboot Rush", "reboot_rush", r => r.user, r => `${r.claims} cards claimed`,
      "cards grabbed during the Monday / Thursday reboot scramble"],
-    [ic("couch") + "Prime Squatter", "squatters", r => r.user, r => `${r.util}% average utilisation`,
+    ["🛋️ Prime Squatter", "squatters", r => r.user, r => `${r.util}% average utilisation`,
      "holds cards while barely using them — the true villain"],
-    [ic("swap") + "Hottest Seat", "hottest_seat", r => r.host, r => `${r.flips} changes of hands`,
+    ["🔄 Hottest Seat", "hottest_seat", r => r.host, r => `${r.flips} changes of hands`,
      "the card that gets passed around the most"],
   ];
   document.getElementById("trophies").innerHTML = TROPHIES.map(([title, key, who, val, desc]) => {

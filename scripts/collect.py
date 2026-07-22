@@ -43,13 +43,13 @@ def handle_for(user: str) -> str:
   mapping = names.setdefault("users", {})
   if user not in mapping:
     digest = hashlib.sha256((salt + user).encode()).digest()
-    handle = (f"{HANDLE_ADJECTIVES[digest[0] % len(HANDLE_ADJECTIVES)]} "
+    handle = (f"{HANDLE_ADJECTIVES[digest[0] % len(HANDLE_ADJECTIVES)]}"
               f"{HANDLE_NOUNS[digest[1] % len(HANDLE_NOUNS)]}")
     taken = set(mapping.values())
     suffix = 2
     base = handle
     while handle in taken:
-      handle = f"{base} {suffix}"
+      handle = f"{base}{suffix}"
       suffix += 1
     mapping[user] = handle
   NAMES.parent.mkdir(parents=True, exist_ok=True)
