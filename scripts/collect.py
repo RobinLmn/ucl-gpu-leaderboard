@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import concurrent.futures as futures
 import hashlib
+import hmac
 import json
 import os
+import re
 import secrets
 import subprocess
 import time
@@ -14,6 +17,7 @@ from pathlib import Path
 GATEWAY = os.environ.get("UCL_GATEWAY", "")
 USER = os.environ.get("UCL_USER", "")
 DOMAIN = os.environ.get("UCL_DOMAIN", "")
+UNLOCK_KEY = os.environ.get("UCL_UNLOCK_KEY", "")
 
 LAB105 = ["aylesbury-l", "barnacle-l", "brent-l", "bufflehead-l", "cackling-l", "canada-l",
           "crested-l", "eider-l", "gadwall-l", "goosander-l", "gressingham-l", "harlequin-l",
@@ -32,6 +36,7 @@ HISTORY = ROOT / "data" / "history.jsonl"
 BOARD = ROOT / "data" / "board.json"
 NAMES = ROOT / "data" / "names.local.json"
 SEASONS = ROOT / "data" / "seasons.json"
+VAULT = ROOT / "data" / "vault.json"
 
 HANDLE_ADJECTIVES = ["Feral", "Nocturnal", "Caffeinated", "Unhinged", "Sleepless", "Rogue",
                      "Turbo", "Silent", "Greedy", "Cursed", "Radiant", "Spectral"]
@@ -57,6 +62,63 @@ def handle_for(user: str) -> str:
   NAMES.write_text(json.dumps(names, indent=1))
   return mapping[user]
 
+def known_users() -> dict:
+  """Every raw username we have ever minted a handle for."""
+  names = json.loads(NAMES.read_text()) if NAMES.exists() else {}
+  return names.get("users", {})
+
+def scrub(text: str) -> str:
+  """Swap any username appearing in free text for its handle.
+
+  Longest first, so a name that contains another name is not half-replaced.
+  """
+  for raw, handle in sorted(known_users().items(), key=lambda kv: -len(kv[0])):
+    text = re.sub(rf"(?<![A-Za-z0-9_]){re.escape(raw)}(?![A-Za-z0-9_])",
+                  f"⟨{handle}⟩", text)
+  return text
+
+PBKDF2_ROUNDS = 600_000
+
+def _keystream(key: bytes, nonce: bytes, length: int) -> bytes:
+  out = bytearray()
+  counter = 0
+  while len(out) < length:
+    out += hmac.new(key, nonce + counter.to_bytes(4, "big"), hashlib.sha256).digest()
+    counter += 1
+  return bytes(out[:length])
+
+def vault_salt() -> bytes:
+  """Stable per-install, so a reader's browser can cache the stretched key.
+
+  It lives beside the handle salt in the file git never sees. Keeping it fixed
+  is safe because the nonce is fresh on every seal, which is what actually has
+  to be unique.
+  """
+  names = json.loads(NAMES.read_text()) if NAMES.exists() else {}
+  salt = names.setdefault("_vault_salt", secrets.token_hex(16))
+  NAMES.parent.mkdir(parents=True, exist_ok=True)
+  NAMES.write_text(json.dumps(names, indent=1))
+  return bytes.fromhex(salt)
+
+def seal(plaintext: bytes, passphrase: str) -> dict:
+  """Encrypt-then-MAC with keys stretched from the passphrase.
+
+  Only PBKDF2 and HMAC-SHA256, because both stdlib Python and WebCrypto have
+  them and nothing else needs installing on either side. The published blob is
+  world-readable, so the stretching is what stands between a passer-by and the
+  names: pick a passphrase that survives an offline guessing run.
+  """
+  salt, nonce = vault_salt(), secrets.token_bytes(16)
+  material = hashlib.pbkdf2_hmac("sha256", passphrase.encode(), salt,
+                                 PBKDF2_ROUNDS, dklen=64)
+  cipher_key, mac_key = material[:32], material[32:]
+  ciphertext = bytes(a ^ b for a, b in
+                     zip(plaintext, _keystream(cipher_key, nonce, len(plaintext))))
+  b64 = lambda raw: base64.b64encode(raw).decode()
+  return {"v": 1, "kdf": "pbkdf2-sha256", "rounds": PBKDF2_ROUNDS,
+          "salt": b64(salt), "nonce": b64(nonce), "ct": b64(ciphertext),
+          "tag": b64(hmac.new(mac_key, nonce + ciphertext, hashlib.sha256).digest())}
+
 MAX_GAP_SECONDS = 20 * 60
 GATECRASH_UTIL = 15
 LEAK_MB = 500
@@ -64,16 +126,32 @@ BUCKET_SECONDS = 15 * 60
 FAMILIES = {"3090": "rtx3090", "4070": "rtx4070"}
 WEEK_SECONDS = 7 * 24 * 3600
 
+GPU_FIELDS = ["name", "memory.used", "memory.total", "utilization.gpu",
+              "driver_version", "utilization.memory", "temperature.gpu",
+              "power.draw", "power.limit", "fan.speed", "clocks.sm",
+              "clocks.max.sm", "persistence_mode", "compute_mode"]
+# Everything after the first four is presentation only; the first four keep the
+# positions the sampler has always parsed.
+SMI_KEYS = ["driver", "util_mem", "temp", "power", "power_limit", "fan",
+            "clock_sm", "clock_max", "persistence", "compute_mode"]
+
 PROBE = r"""
 echo REACHED
 echo "TIME|$(date +%s)"
-nvidia-smi --query-gpu=name,memory.used,memory.total,utilization.gpu --format=csv,noheader 2>/dev/null | head -1 | sed 's/^/GPU|/'
-nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader 2>/dev/null | while IFS=, read -r pid mem; do
+nvidia-smi --query-gpu=__FIELDS__ --format=csv,noheader 2>/dev/null | head -1 | sed 's/^/GPU|/'
+nvidia-smi --query-compute-apps=pid,used_memory,process_name --format=csv,noheader 2>/dev/null | while IFS=, read -r pid mem name; do
   pid=$(echo $pid | tr -d ' ')
   u=$(ps -o user= -p "$pid" 2>/dev/null | tr -d ' ')
-  [ -n "$u" ] && echo "PROC|$u|$(echo $mem | tr -d ' ')"
+  [ -n "$u" ] || continue
+  et=$(ps -o etimes= -p "$pid" 2>/dev/null | tr -d ' ')
+  cpu=$(ps -o pcpu= -p "$pid" 2>/dev/null | tr -d ' ')
+  rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ')
+  args=$(ps -o args= -p "$pid" 2>/dev/null | tr '\n|' '  ')
+  echo "PROC|$u|$(echo $mem | tr -d ' ')|$pid|$(echo $name | sed 's/^ *//')|$et|$cpu|$rss|$args"
 done
-"""
+ps -eo uid=,user=,pcpu= 2>/dev/null | awk '$1 >= 1000 {cpu[$2] += $3}
+  END {for (u in cpu) if (cpu[u] >= 80) printf "CPU|%s|%.0f\n", u, cpu[u]}'
+""".replace("__FIELDS__", ",".join(GPU_FIELDS))
 
 def ssh(host: str, script: str, timeout: int = 45) -> str:
   cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
@@ -96,31 +174,51 @@ def short_model(name: str) -> str:
   short = name.replace("NVIDIA GeForce ", "").replace(" SUPER", " S").strip()
   return short or "unknown"
 
+def _int(text: str) -> int:
+  digits = re.match(r"\s*(\d+)", text or "")
+  return int(digits.group(1)) if digits else 0
+
 def probe(host: str, tries: int = 2) -> dict:
   for _ in range(tries):
     out = ssh(host, PROBE)
     if "REACHED" in out:
-      gpu, users, mem, mem_total, util, clock, procs = "unknown", [], 0, 0, 0, 0, 0
+      gpu, users, mem, mem_total, util, clock = "unknown", [], 0, 0, 0, 0
+      smi, detail, cpu_only = {}, [], {}
       for line in out.splitlines():
         if line.startswith("GPU|"):
           parts = [p.strip() for p in line[4:].split(",")]
           if parts:
             gpu = short_model(parts[0])
           if len(parts) >= 4:
-            mem = int(parts[1].split()[0])
-            mem_total = int(parts[2].split()[0])
-            util = int(parts[3].split()[0])
+            mem = _int(parts[1])
+            mem_total = _int(parts[2])
+            util = _int(parts[3])
+          smi = dict(zip(SMI_KEYS, parts[4:]))
         elif line.startswith("TIME|"):
           clock = int(line[5:].strip() or 0)
         elif line.startswith("PROC|"):
-          _, user, _ = (line.split("|") + ["", ""])[:3]
+          fields = (line.split("|", 8) + [""] * 9)[:9]
+          _, user, pmem, pid, name, etimes, cpu, rss, args = fields
+          if not user:
+            continue
           users.append(user)
-          procs += 1
+          detail.append({"pid": _int(pid), "user": user, "mem": _int(pmem),
+                         "name": name.strip(), "etimes": _int(etimes),
+                         "cpu": cpu.strip(), "rss": _int(rss),
+                         "cmd": args.strip()})
+        elif line.startswith("CPU|"):
+          # Real accounts only (uid >= 1000), and only once they are pegging
+          # about a core: enough to tell a training run from a login shell.
+          _, user, pct = (line.split("|") + ["", ""])[:3]
+          if user:
+            cpu_only[user] = _int(pct)
       return {"host": host, "state": "up", "gpu": gpu, "users": sorted(set(users)),
-              "mem": mem, "mem_total": mem_total, "util": util, "procs": procs,
-              "clock": clock}
+              "mem": mem, "mem_total": mem_total, "util": util,
+              "procs": len(detail), "clock": clock, "smi": smi, "detail": detail,
+              "cpu": {u: p for u, p in cpu_only.items() if u not in set(users)}}
   return {"host": host, "state": "unreachable", "gpu": "unknown", "users": [],
-          "mem": 0, "mem_total": 0, "util": 0, "procs": 0, "clock": 0}
+          "mem": 0, "mem_total": 0, "util": 0, "procs": 0, "clock": 0,
+          "smi": {}, "detail": [], "cpu": {}}
 
 def cluster_time(hosts: list[dict]) -> int:
   """Median clock across reachable machines, falling back to the local one.
@@ -138,6 +236,18 @@ def sample() -> dict:
   for h in hosts:
     h.pop("clock", None)
   return {"t": t, "hosts": hosts}
+
+TRANSIENT = ("smi", "detail")
+
+def lean(snap: dict) -> dict:
+  """The snapshot as history wants it: aggregates only.
+
+  Per-process detail is worth showing for the live moment but would multiply
+  the size of a file we re-read in full on every cycle, so it never lands there.
+  """
+  return {"t": snap["t"],
+          "hosts": [{k: v for k, v in h.items() if k not in TRANSIENT}
+                    for h in snap["hosts"]]}
 
 def _in_reboot_window(when: int) -> bool:
   """The labs restart Monday and Thursday evenings, 19:30 to midnight.
@@ -298,12 +408,12 @@ def _series(window: list[dict]) -> list[dict]:
     points.append(point)
   return points
 
-def build_board(samples: list[dict]) -> dict:
+def build_board(samples: list[dict], live_snap: dict = None) -> dict:
   now = samples[-1]["t"] if samples else int(time.time())
   season = season_state(now, samples)
   season_start = season["anchor"] + season["index"] * WEEK_SECONDS
   recent = [s for s in samples if s["t"] >= season_start]
-  latest = samples[-1] if samples else {"t": now, "hosts": []}
+  latest = live_snap or (samples[-1] if samples else {"t": now, "hosts": []})
 
   gpu_hours = _gpu_hours(recent)
   host_busy: dict[str, float] = defaultdict(float)
@@ -311,6 +421,8 @@ def build_board(samples: list[dict]) -> dict:
   host_model: dict[str, str] = {}
   peak = {"gpus": 0, "users": 0, "t": None}
   night_hours: dict[str, float] = defaultdict(float)
+  plough_hours: dict[str, float] = defaultdict(float)   # CPU burned, GPU untouched
+  plough_peak: dict[str, int] = defaultdict(int)
 
   for previous, current in zip(recent, recent[1:]):
     gap = current["t"] - previous["t"]
@@ -332,6 +444,13 @@ def build_board(samples: list[dict]) -> dict:
       for user in host["users"]:
         if hour_of_day >= 23 or hour_of_day < 6:
           night_hours[user] += hours
+      # Sat on a machine chosen for its GPU, working the CPU instead.
+      if host["gpu"] not in ("unknown", "no GPU"):
+        for user, pct in (host.get("cpu") or {}).items():
+          if user in host["users"]:
+            continue
+          plough_hours[user] += hours
+          plough_peak[user] = max(plough_peak[user], pct)
     if len(live_people) > peak["users"]:
       peak = {"gpus": live, "users": len(live_people), "t": current["t"]}
 
@@ -340,6 +459,8 @@ def build_board(samples: list[dict]) -> dict:
   user_on_host: dict[tuple, float] = defaultdict(float)
   leak_hours: dict[str, float] = defaultdict(float)
   leak_mem: dict[str, int] = defaultdict(int)
+  leak_blame: dict[str, dict] = defaultdict(lambda: defaultdict(float))
+  last_holders: dict[str, list] = {}   # host -> who was on it when it last had anyone
   for previous, current in zip(recent, recent[1:]):
     gap = current["t"] - previous["t"]
     if gap <= 0 or gap > MAX_GAP_SECONDS:
@@ -356,9 +477,16 @@ def build_board(samples: list[dict]) -> dict:
       if not host["users"] and host["mem"] >= LEAK_MB:
         leak_hours[host["host"]] += gap / 3600.0
         leak_mem[host["host"]] = max(leak_mem[host["host"]], host["mem"])
+        # Nobody is running anything, so the memory belongs to whoever was here
+        # last. Split the blame if they left together.
+        blame = last_holders.get(host["host"], [])
+        for user in blame:
+          leak_blame[host["host"]][user] += gap / 3600.0 / len(blame)
       for user in host["users"]:
         seen_on[host["host"]].add(user)
         user_on_host[(host["host"], user)] += gap / 3600.0
+      if host["users"]:
+        last_holders[host["host"]] = list(host["users"])
 
   def _award(host, extra):
     return dict(extra, host=host, gpu=host_model.get(host, "unknown"))
@@ -370,8 +498,18 @@ def build_board(samples: list[dict]) -> dict:
       awards["unstable"] = _award(host, {"restarts": count})
   if leak_hours:
     host = max(leak_hours, key=lambda h: (leak_hours[h], leak_mem[h]))
+    culprits = sorted(leak_blame.get(host, {}).items(), key=lambda kv: -kv[1])
     awards["forgotten"] = _award(host, {"mem": leak_mem[host],
                                         "hours": round(leak_hours[host], 1)})
+    if culprits:
+      awards["forgotten"]["user"] = handle_for(culprits[0][0])
+      awards["forgotten"]["others"] = [handle_for(u) for u, _ in culprits[1:3]]
+  occupancy = {h: host_busy.get(h, 0.0) / total for h, total in host_total.items() if total > 0}
+  if occupancy:
+    host = max(occupancy, key=lambda h: (occupancy[h], host_total[h]))
+    if occupancy[host] > 0:
+      awards["workhorse"] = _award(host, {"busy_pct": round(100 * occupancy[host]),
+                                          "hours": round(host_busy.get(host, 0.0), 1)})
   visited = {h: len(u) for h, u in seen_on.items() if u}
   if visited:
     busy_h = lambda h: host_busy.get(h, 0.0)
@@ -441,11 +579,20 @@ def build_board(samples: list[dict]) -> dict:
   ]
   utilisation.sort(key=lambda r: -r["busy_pct"])
 
+  cards_used: dict[str, set] = defaultdict(set)
+  for (host, user) in user_on_host:
+    cards_used[user].add(host)
+
   ev = _events(recent)
   ev["biggest_hoard"] = [{"user": u, "cards": n, "t": hoard_when.get(u)}
                          for u, n in sorted(hoard.items(), key=lambda kv: -kv[1])[:5]]
+  ev["playboy"] = [{"user": u, "cards": len(h)}
+                   for u, h in sorted(cards_used.items(), key=lambda kv: -len(kv[1]))[:5]
+                   if len(h) > 1]
+  ev["ploughing"] = [{"user": u, "hours": round(h, 1), "cpu": plough_peak[u]}
+                     for u, h in sorted(plough_hours.items(), key=lambda kv: -kv[1])[:5]]
   for key in ("quickest_draw", "longest_hold", "reboot_rush", "squatters", "gatecrasher",
-              "biggest_hoard"):
+              "biggest_hoard", "playboy", "ploughing"):
     for row in ev[key]:
       if key == "squatters":
         row["cards"] = len(live_users.get(row["user"], []))
@@ -478,6 +625,21 @@ def build_board(samples: list[dict]) -> dict:
      for host, peak_n in share_peak.items() if peak_n > 0),
     key=lambda r: (-r["peak"], -r["now"], r["host"]))
 
+  def live_host(h: dict) -> dict:
+    """One card as the map shows it: stats in the clear, people behind handles."""
+    return {"host": h["host"], "gpu": h["gpu"], "mem": h["mem"],
+            "mem_total": h.get("mem_total", 0), "util": h["util"],
+            "users": [handle_for(u) for u in h["users"]],
+            "smi": h.get("smi", {}),
+            "processes": [{"pid": p["pid"], "user": handle_for(p["user"]),
+                           "mem": p["mem"], "etimes": p["etimes"], "cpu": p["cpu"],
+                           "rss": p["rss"],
+                           # Only the program, never the path or the arguments:
+                           # a working directory or a dataset name says who you
+                           # are just as loudly as a username does.
+                           "name": scrub(os.path.basename(p.get("name", "")))}
+                          for p in sorted(h.get("detail", []), key=lambda p: -p["mem"])]}
+
   return {
     "generated": now,
     "season": {"n": season["index"] + 1, "start": season_start,
@@ -491,17 +653,29 @@ def build_board(samples: list[dict]) -> dict:
     "samples": len(recent),
     "leaderboard": leaderboard,
     "live": {
-      "free": [{"host": h["host"], "gpu": h["gpu"], "mem": h["mem"],
-                "mem_total": h.get("mem_total", 0), "util": h["util"]} for h in free],
-      "busy": [{"host": h["host"], "gpu": h["gpu"],
-                "users": [handle_for(u) for u in h["users"]],
-                "mem": h["mem"], "mem_total": h.get("mem_total", 0),
-                "util": h["util"]} for h in busy],
+      "free": [live_host(h) for h in free],
+      "busy": [live_host(h) for h in busy],
       "unreachable": unreachable,
     },
     "hosts": utilisation,
     "peak": peak,
   }
+
+def build_vault(latest: dict) -> dict:
+  """The plaintext behind the handles, sealed with UCL_UNLOCK_KEY.
+
+  Everything the board deliberately withholds lives here and nowhere else: the
+  real usernames, and the full command lines the map only shows as a program
+  name. The passphrase never leaves the collector machine and is never written
+  into the payload — the browser re-derives the key from what the reader types.
+  """
+  procs = {}
+  for host in latest["hosts"]:
+    for p in host.get("detail", []):
+      procs[f"{host['host']}|{p['pid']}"] = {"user": p["user"], "cmd": p["cmd"]}
+  plaintext = json.dumps({"users": {h: raw for raw, h in known_users().items()},
+                          "procs": procs}, separators=(",", ":")).encode()
+  return seal(plaintext, UNLOCK_KEY)
 
 def main() -> None:
   parser = argparse.ArgumentParser(description=__doc__)
@@ -512,16 +686,23 @@ def main() -> None:
     raise SystemExit("set UCL_GATEWAY, UCL_USER and UCL_DOMAIN (see .env.example); "
                      "they are intentionally not baked into this file")
 
+  if UNLOCK_KEY and len(UNLOCK_KEY) < 16:
+    raise SystemExit("UCL_UNLOCK_KEY is short enough to guess offline — the sealed "
+                     "payload is published to a public repo. Use a long passphrase.")
+
   HISTORY.parent.mkdir(parents=True, exist_ok=True)
   while True:
     snap = sample()
     up = sum(1 for h in snap["hosts"] if h["state"] == "up")
     with HISTORY.open("a") as f:
-      f.write(json.dumps(snap) + "\n")
+      f.write(json.dumps(lean(snap)) + "\n")
 
     samples = [json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
-    board = build_board(samples)
+    board = build_board(samples, live_snap=snap)
+    board["vault"] = bool(UNLOCK_KEY)
     BOARD.write_text(json.dumps(board, indent=1))
+    if UNLOCK_KEY:
+      VAULT.write_text(json.dumps(build_vault(snap)))
     print(f"[collect] {time.strftime('%H:%M:%S')} up={up}/{len(HOSTS)} "
           f"busy={len(board['live']['busy'])} free={len(board['live']['free'])} "
           f"samples={board['samples']}", flush=True)

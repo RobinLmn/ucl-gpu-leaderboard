@@ -78,10 +78,21 @@
   .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;
          border:1px solid var(--line);margin-right:4px;color:var(--muted);white-space:nowrap}
 
+  .filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:11px}
+  .filters button{background:var(--panel-2);color:var(--muted);border:1px solid var(--line);
+    border-radius:999px;padding:5px 12px;font:inherit;font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;cursor:pointer}
+  .filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .filters .sep{width:1px;height:16px;background:var(--line);margin:0 5px}
+  .filters .count{color:var(--dim);font-size:11px;margin-left:auto}
+
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:7px}
   .node{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 9px;
-        font-size:11px;cursor:default;transition:transform .1s;min-width:0}
+        font-size:11px;cursor:pointer;transition:transform .1s;min-width:0;text-align:left;
+        color:inherit;font-family:inherit;width:100%;display:block}
   .node:hover{transform:translateY(-2px);border-color:var(--muted)}
+  .node:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+  .empty{color:var(--dim);font-size:12px;padding:10px 2px}
   .node .h{font-weight:700;font-size:12px;overflow-wrap:anywhere;word-break:break-all}
   .node .g{color:var(--dim);font-size:10px;margin-top:1px}
   .node.free{border-left:3px solid var(--green)}
@@ -99,11 +110,47 @@
   .trophy .v{color:var(--blue);font-size:13px}
   .trophy .d{color:var(--dim);font-size:11px;margin-top:6px;line-height:1.45}
   .trophy .none{color:var(--dim);font-size:12px;margin-top:7px}
+  .trophies.four{grid-template-columns:repeat(4,minmax(0,1fr))}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:980px){.trophies.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:720px){.two{grid-template-columns:1fr}.podium{grid-template-columns:1fr}
     .trophies{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:430px){.trophies,.trophies.four{grid-template-columns:1fr}}
   footer{margin-top:44px;color:var(--dim);font-size:11px;text-align:center;line-height:1.8}
   .scroll{overflow-x:auto}
+
+  .keybtn{background:var(--panel);border:1px solid var(--line);border-radius:999px;
+    color:var(--muted);font:inherit;font-size:12px;padding:5px 13px;cursor:pointer;margin-left:8px}
+  .keybtn:hover{border-color:var(--muted);color:var(--ink)}
+  .keybtn.on{border-color:var(--green);color:var(--green)}
+  #keyform{display:inline-flex;gap:6px;align-items:center;margin-left:8px;vertical-align:middle}
+  #keyform input{background:var(--panel);border:1px solid var(--line);border-radius:999px;
+    color:var(--ink);font:inherit;font-size:12px;padding:5px 13px;width:190px}
+  #keyform input:focus{outline:none;border-color:var(--blue)}
+  #keynote{color:var(--dim);font-size:11px;margin-top:8px;min-height:15px}
+  #keynote.bad{color:var(--hot)}
+
+  .sheetwrap{position:fixed;inset:0;background:rgba(6,9,13,.72);z-index:50;
+    display:flex;align-items:flex-start;justify-content:center;padding:5vh 12px;overflow-y:auto}
+  .sheetwrap[hidden]{display:none}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    width:min(760px,100%);padding:18px 20px 22px}
+  .sheet h3{margin:0;font-size:17px;letter-spacing:1px}
+  .sheet .close{float:right;background:none;border:0;color:var(--muted);font:inherit;
+    font-size:20px;line-height:1;cursor:pointer;padding:0 2px}
+  .sheet .close:hover{color:var(--ink)}
+  .sheet .sub2{color:var(--dim);font-size:12px;margin:4px 0 16px}
+  .sheet h4{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);
+    margin:18px 0 8px;font-weight:500}
+  .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:8px}
+  .kv div{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .kv .k{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:1px}
+  .kv .v{font-size:14px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .sheet table{font-size:12px}
+  .sheet td{white-space:nowrap}
+  .sheet td.cmd{white-space:pre-wrap;color:var(--muted);font-size:11px;max-width:340px}
+  .meter{height:6px;border-radius:3px;background:#1e2430;overflow:hidden;margin-top:6px}
+  .meter i{display:block;height:100%;background:var(--blue)}
 </style>
 </head>
 <body>
@@ -112,6 +159,12 @@
     <h1>UCL GPU LEADERBOARD</h1>
     <div class="sub">who&rsquo;s hogging the UCL GPUs?</div>
     <div class="pill"><span class="dot"></span><span id="status">loading…</span></div>
+    <button class="keybtn" id="keybtn" hidden>🔒 unlock names</button>
+    <form id="keyform" hidden autocomplete="off">
+      <input type="password" id="keyinput" placeholder="key" aria-label="unlock key">
+      <button class="keybtn" type="submit" style="margin:0">go</button>
+    </form>
+    <div id="keynote"></div>
   </header>
 
   <div class="tiles" id="tiles"></div>
@@ -131,7 +184,7 @@
   </table></div>
 
   <h2>🏅 Trophy cabinet</h2>
-  <div class="trophies" id="trophies"></div>
+  <div class="trophies four" id="trophies"></div>
 
   <div class="two">
     <div>
@@ -150,7 +203,9 @@
   <div class="trophies" id="gputrophies"></div>
 
   <h2>🗺️ The lab, right now</h2>
+  <div class="filters" id="mapfilters"></div>
   <div class="grid" id="map"></div>
+  <div class="empty" id="mapempty" hidden>no cards match that filter</div>
 
   <h2>📈 Cluster load through the week</h2>
   <div class="chartwrap">
@@ -162,13 +217,23 @@
 
   <footer>
     <div id="meta"></div>
-    <div>names are salted pseudonyms.</div>
+    <div id="privacy">names are salted pseudonyms.</div>
   </footer>
+</div>
+
+<div class="sheetwrap" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle">
+    <button class="close" id="sheetclose" aria-label="close">&times;</button>
+    <div id="sheetbody"></div>
+  </div>
 </div>
 
 <script>
 const REFRESH_MS = 60000;
 const fmt = h => h >= 10 ? h.toFixed(0) : h.toFixed(1);
+const gb = mb => mb >= 1024 ? `${(mb/1024).toFixed(1)}G` : `${mb || 0}M`;
+const esc = s => String(s ?? "").replace(/[&<>"']/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 function ago(ts){
   const s = Math.max(0, Math.floor(Date.now()/1000 - ts));
@@ -176,6 +241,234 @@ function ago(ts){
   if (s < 5400) return Math.round(s/60) + "m ago";
   return Math.round(s/3600) + "h ago";
 }
+
+/* ---- the key ------------------------------------------------------------
+   data/vault.json holds the real usernames and full command lines, sealed
+   against a passphrase that only ever exists on the collector machine and in
+   whatever the reader types here. Nothing is sent anywhere: the page derives
+   the key locally and either the payload opens or it does not. */
+let SECRETS = null;                 // {users, procs} once unlocked
+// Stretching the passphrase costs a second, and the salt is stable between
+// cycles, so the derived key is kept for as long as both stay the same.
+let derived = {salt: null, pass: null, bits: null};
+
+const bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+async function unseal(vault, pass){
+  if (derived.salt !== vault.salt || derived.pass !== pass){
+    const seed = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass),
+      "PBKDF2", false, ["deriveBits"]);
+    derived = {salt: vault.salt, pass, bits: new Uint8Array(await crypto.subtle.deriveBits(
+      {name: "PBKDF2", salt: bytes(vault.salt), iterations: vault.rounds, hash: "SHA-256"},
+      seed, 512))};
+  }
+  const key = raw => crypto.subtle.importKey("raw", raw, {name: "HMAC", hash: "SHA-256"},
+    false, ["sign", "verify"]);
+  const ct = bytes(vault.ct), nonce = bytes(vault.nonce);
+  const signed = new Uint8Array(nonce.length + ct.length);
+  signed.set(nonce); signed.set(ct, nonce.length);
+  if (!await crypto.subtle.verify("HMAC", await key(derived.bits.slice(32)),
+                                  bytes(vault.tag), signed)) {
+    derived = {salt: null, pass: null, bits: null};
+    return null;                          // wrong passphrase, or a mangled file
+  }
+  const stream = await key(derived.bits.slice(0, 32));
+  const out = new Uint8Array(ct.length);
+  for (let block = 0; block * 32 < ct.length; block++){
+    const counter = new Uint8Array(nonce.length + 4);
+    counter.set(nonce);
+    new DataView(counter.buffer).setUint32(nonce.length, block);
+    const pad = new Uint8Array(await crypto.subtle.sign("HMAC", stream, counter));
+    for (let i = 0; i < 32 && block * 32 + i < ct.length; i++)
+      out[block * 32 + i] = ct[block * 32 + i] ^ pad[i];
+  }
+  return JSON.parse(new TextDecoder().decode(out));
+}
+
+/* Swap every handle back for the name behind it, wherever it appears. */
+function reveal(value){
+  if (!SECRETS) return value;
+  const names = SECRETS.users || {};
+  const walk = v => {
+    if (typeof v === "string")
+      return names[v] || v.replace(/⟨([^⟩]+)⟩/g, (whole, handle) => names[handle] || whole);
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === "object")
+      return Object.fromEntries(Object.entries(v).map(([k, item]) => [k, walk(item)]));
+    return v;
+  };
+  return walk(value);
+}
+
+function note(text, bad){
+  const el = document.getElementById("keynote");
+  el.textContent = text || "";
+  el.className = bad ? "bad" : "";
+}
+
+function keyUI(){
+  const unlocked = !!SECRETS;
+  const btn = document.getElementById("keybtn");
+  btn.hidden = !(board && board.vault);
+  btn.textContent = unlocked ? "🔓 names revealed — lock" : "🔒 unlock names";
+  btn.classList.toggle("on", unlocked);
+  document.getElementById("privacy").textContent = unlocked
+    ? "names revealed on this device only — nothing was sent anywhere."
+    : "names are salted pseudonyms.";
+}
+
+async function unlock(pass){
+  note("unlocking…");
+  try{
+    const r = await fetch("data/vault.json?" + Date.now());
+    const opened = await unseal(await r.json(), pass);
+    if (!opened){ note("that key does not open it", true); return false; }
+    SECRETS = opened;
+    sessionStorage.setItem("ucl-key", pass);   // this tab only; cleared on close
+    note("");
+    document.getElementById("keyform").hidden = true;
+    if (board) show(board);
+    return true;
+  }catch(e){
+    note("no vault published yet", true);
+    return false;
+  }
+}
+
+function lock(){
+  SECRETS = null;
+  derived = {salt: null, pass: null, bits: null};
+  sessionStorage.removeItem("ucl-key");
+  if (board) show(board);
+}
+
+document.getElementById("keybtn").onclick = () => {
+  if (SECRETS) return lock();
+  const form = document.getElementById("keyform");
+  form.hidden = !form.hidden;
+  if (!form.hidden) document.getElementById("keyinput").focus();
+};
+document.getElementById("keyform").onsubmit = async e => {
+  e.preventDefault();
+  const input = document.getElementById("keyinput");
+  const ok = await unlock(input.value);
+  if (ok) input.value = "";
+};
+
+/* ---- the lab map -------------------------------------------------------- */
+const FAMILY = [["all", "all cards", () => true],
+                ["rtx3090", "3090", n => /3090/.test(n.gpu)],
+                ["rtx4070", "4070", n => /4070/.test(n.gpu)]];
+const STATE = [["all", "any state", () => true],
+               ["free", "idle", n => n.k === "free"],
+               ["busy", "in use", n => n.k === "busy"]];
+const filters = {family: "all", state: "all"};
+let nodes = [];
+
+function renderMap(){
+  const family = FAMILY.find(f => f[0] === filters.family)[2];
+  const state = STATE.find(f => f[0] === filters.state)[2];
+  const chip = (group, key, active) => ([id, label, test]) =>
+    `<button data-group="${group}" data-key="${id}" aria-pressed="${id === active}">${label}` +
+    `<span style="opacity:.6"> ${nodes.filter(n => test(n) && (group === "family"
+      ? state(n) : family(n))).length}</span></button>`;
+  document.getElementById("mapfilters").innerHTML =
+    FAMILY.map(chip("family", filters.family, filters.family)).join("") +
+    `<span class="sep"></span>` +
+    STATE.map(chip("state", filters.state, filters.state)).join("") +
+    `<span class="count">click a card for its nvidia-smi</span>`;
+  for (const btn of document.querySelectorAll("#mapfilters button"))
+    btn.onclick = () => { filters[btn.dataset.group] = btn.dataset.key; renderMap(); };
+
+  const shown = nodes.filter(n => family(n) && state(n));
+  document.getElementById("mapempty").hidden = shown.length > 0;
+  document.getElementById("map").innerHTML = shown.map(n => `
+    <button class="node ${n.k}" data-host="${esc(n.host)}"
+            title="${n.k === 'down' ? 'unreachable' : esc(n.gpu) + ' — click for details'}">
+      <div class="h">${esc(n.host.replace(/-l$/,""))}${marks(gpuMarks, n.host)}</div>
+      <div class="g">${esc(n.gpu)}</div>
+      <div class="u">${n.k === "busy" ? esc(n.users.join(", "))
+                     : n.k === "free" ? "idle" : "no reply"}</div>
+      ${n.k === "down" ? "" : `<div class="m">${n.util ?? 0}% &middot; ${gb(n.mem)}${
+        n.mem_total ? ` / ${gb(n.mem_total)}` : ""}</div>`}
+    </button>`).join("");
+  for (const el of document.querySelectorAll("#map .node"))
+    el.onclick = () => openSheet(el.dataset.host);
+}
+
+/* ---- one card, in full -------------------------------------------------- */
+const SMI_ROWS = [["driver", "driver"], ["temp", "temp °C"], ["power", "power draw"],
+  ["power_limit", "power cap"], ["fan", "fan"], ["util_mem", "memory bus"],
+  ["clock_sm", "sm clock"], ["clock_max", "sm clock max"],
+  ["persistence", "persistence"], ["compute_mode", "compute mode"]];
+
+function runtime(seconds){
+  if (!seconds) return "—";
+  const d = Math.floor(seconds / 86400), h = Math.floor(seconds % 86400 / 3600);
+  const m = Math.floor(seconds % 3600 / 60);
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m`;
+}
+
+function openSheet(host){
+  const node = nodes.find(n => n.host === host);
+  if (!node) return;
+  const smi = node.smi || {}, procs = node.processes || [];
+  const pct = node.mem_total ? Math.round(100 * node.mem / node.mem_total) : 0;
+
+  const cells = [["utilisation", `${node.util ?? 0}%`],
+                 ["memory", `${gb(node.mem)}${node.mem_total ? ` / ${gb(node.mem_total)}` : ""}`],
+                 ["processes", procs.length || "none"]]
+    .concat(SMI_ROWS.filter(([k]) => smi[k] && smi[k] !== "[N/A]")
+                    .map(([k, label]) => [label, smi[k]]));
+
+  const rows = procs.map(p => {
+    const full = SECRETS && (SECRETS.procs || {})[`${node.host}|${p.pid}`];
+    return `<tr>
+      <td style="color:var(--dim)">${p.pid}</td>
+      <td><strong>${esc(p.user)}</strong></td>
+      <td class="cmd">${esc(full ? full.cmd : p.name || "?")}</td>
+      <td style="text-align:right">${gb(p.mem)}</td>
+      <td style="text-align:right;color:var(--muted)">${esc(p.cpu || "—")}%</td>
+      <td style="text-align:right;color:var(--muted)">${gb(Math.round((p.rss || 0)/1024))}</td>
+      <td style="text-align:right;color:var(--muted)">${runtime(p.etimes)}</td>
+    </tr>`;
+  }).join("");
+
+  const stranded = !procs.length && node.mem >= 500
+    ? `<div class="sub2" style="color:var(--hot)">👻 ${gb(node.mem)} still allocated with
+       nothing running — somebody left the lights on.</div>` : "";
+
+  document.getElementById("sheetbody").innerHTML = `
+    <h3 id="sheettitle">${esc(node.host)}</h3>
+    <div class="sub2">${esc(node.gpu)}${node.k === "down" ? " · unreachable" : ""}</div>
+    <div class="meter"><i style="width:${pct}%"></i></div>
+    <h4>nvidia-smi</h4>
+    <div class="kv">${cells.map(([k, v]) =>
+      `<div><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("")}</div>
+    <h4>compute processes</h4>
+    ${stranded}
+    ${procs.length ? `<div class="scroll"><table>
+      <thead><tr><th>pid</th><th>user</th>
+        <th>${SECRETS ? "command" : "program"}</th><th style="text-align:right">gpu mem</th>
+        <th style="text-align:right">cpu</th><th style="text-align:right">rss</th>
+        <th style="text-align:right">running</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+      ${SECRETS ? "" : `<div class="sub2" style="margin-top:10px">command lines and real
+        usernames are held back — unlock at the top of the page to see them.</div>`}`
+      : `<div class="empty">no compute processes on this card</div>`}`;
+  document.getElementById("sheet").hidden = false;
+}
+
+const closeSheet = () => { document.getElementById("sheet").hidden = true; };
+document.getElementById("sheetclose").onclick = closeSheet;
+document.getElementById("sheet").onclick = e => {
+  if (e.target.id === "sheet") closeSheet();
+};
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+let userMarks = {}, gpuMarks = {};
+const marks = (table, key) => (table[key] || [])
+  .map(([emoji, name]) => `<span class="mk" title="${name}">${emoji}</span>`).join("");
 
 function titles(row, best){
   const t = [];
@@ -224,11 +517,12 @@ function render(b){
 
   const USER_MARKS = {quickest_draw: ["⚡", "Quickest Draw"], longest_hold: ["🏰", "The Landlord"],
     reboot_rush: ["🏁", "Reboot Rush"], squatters: ["🛋️", "Prime Squatter"],
-    biggest_hoard: ["🏔️", "Record Hoard"], gatecrasher: ["🥷", "The Gatecrasher"]};
+    biggest_hoard: ["🏔️", "Record Hoard"], gatecrasher: ["🥷", "The Gatecrasher"],
+    playboy: ["🐰", "The Playboy"], ploughing: ["🧑‍🌾", "Ploughing By Hand"]};
   const GPU_MARKS = {unstable: ["💥", "Most Unstable"], crowded: ["🎪", "Grand Central"],
     exclusive: ["🚪", "Private Club"], loyal: ["💍", "Best Friends"],
-    forgotten: ["👻", "Forgotten"]};
-  const userMarks = {}, gpuMarks = {};
+    forgotten: ["👻", "Forgotten"], workhorse: ["🐴", "The Workhorse"]};
+  userMarks = {}; gpuMarks = {};
   for (const [key, mark] of Object.entries(USER_MARKS)) {
     const row = (b.trophies?.[key] || [])[0];
     if (row) (userMarks[row.user] ||= []).push(mark);
@@ -239,9 +533,6 @@ function render(b){
     (gpuMarks[award.host] ||= []).push(mark);
     if (award.user) (userMarks[award.user] ||= []).push(mark);
   }
-  const marks = (table, key) => (table[key] || [])
-    .map(([emoji, name]) => `<span class="mk" title="${name}">${emoji}</span>`).join("");
-
   const season = b.season || {n: 1, ends: 0, past: []};
   const left = Math.max(0, (season.ends || 0) - b.generated);
   const countdown = left >= 86400 ? `${Math.floor(left/86400)}d ${Math.floor(left%86400/3600)}h`
@@ -308,20 +599,12 @@ function render(b){
   document.getElementById("cold").innerHTML = ranked.slice(-6).reverse().map(hostRow).join("")
     || `<tr><td style="color:var(--dim)">not enough samples yet</td></tr>`;
 
-  const gb = mb => mb >= 1024 ? `${(mb/1024).toFixed(1)}G` : `${mb || 0}M`;
-  const nodes = [
+  nodes = [
     ...live.busy.map(h => ({...h, k:"busy"})),
     ...live.free.map(h => ({...h, k:"free"})),
-    ...live.unreachable.map(h => ({host:h, gpu:"—", k:"down", users:[]})),
+    ...live.unreachable.map(h => ({host:h, gpu:"—", k:"down", users:[], processes:[]})),
   ];
-  document.getElementById("map").innerHTML = nodes.map(n => `
-    <div class="node ${n.k}" title="${n.k === 'down' ? 'unreachable' : n.gpu}">
-      <div class="h">${n.host.replace(/-l$/,"")}${marks(gpuMarks, n.host)}</div>
-      <div class="g">${n.gpu}</div>
-      <div class="u">${n.k === "busy" ? n.users.join(", ") : n.k === "free" ? "idle" : "no reply"}</div>
-      ${n.k === "down" ? "" : `<div class="m">${n.util ?? 0}% &middot; ${gb(n.mem)}${
-        n.mem_total ? ` / ${gb(n.mem_total)}` : ""}</div>`}
-    </div>`).join("");
+  renderMap();
 
   const secs = s => s < 90 ? `${s}s` : `${Math.round(s/60)} min`;
   const TROPHIES = [
@@ -340,6 +623,12 @@ function render(b){
     ["🥷 The Gatecrasher", "gatecrasher", r => r.user,
      r => `${r.count} time${r.count === 1 ? "" : "s"}`,
      "jumped onto a card someone else was already using"],
+    ["🐰 The Playboy", "playboy", r => r.user, r => `${r.cards} different cards`,
+     "never settles — has been on more of the lab&rsquo;s cards than anyone else"],
+    ["🧑‍🌾 Ploughing By Hand", "ploughing", r => r.user,
+     r => `${r.hours}h at ${r.cpu}% cpu`,
+     "pegging the cores of a machine picked for its GPU, without touching the GPU — " +
+     "there is a tractor in the shed and they have chosen the shovel"],
   ];
   document.getElementById("trophies").innerHTML = TROPHIES.map(([title, key, who, val, desc]) => {
     const row = (b.trophies?.[key] || [])[0];
@@ -363,9 +652,16 @@ function render(b){
     ["💍 Best Friends", "loyal", a => a.user,
      a => `Best friends: ${a.user} spent ${a.share}% of all their GPU time on ${card(a)} (${a.gpu}), ${a.hours}h`,
      "inseparable — this person runs nearly everything on this one card"],
-    ["👻 Forgotten", "forgotten", a => `${gb(a.mem)} stranded`,
-     a => `Forgotten: ${gb(a.mem)} still allocated on ${card(a)} (${a.gpu}) with no process running — ${a.hours}h`,
-     "memory still held with nobody running anything — somebody left the lights on"],
+    ["🐴 The Workhorse", "workhorse", a => `${a.busy_pct}% of the season busy`,
+     a => `Workhorse: ${card(a)} (${a.gpu}) was occupied ${a.busy_pct}% of the season — ${a.hours}h of work`,
+     "occupied more of the season than any other card — it has not had a minute to itself"],
+    ["👻 Forgotten", "forgotten",
+     a => a.user ? `${gb(a.mem)} · ${a.user}` : `${gb(a.mem)} stranded`,
+     a => `Forgotten: ${gb(a.mem)} still allocated on ${card(a)} (${a.gpu}) with no process running — ${a.hours}h. ` +
+          (a.user ? `${a.user} was the last person on it${a.others?.length
+             ? `, alongside ${a.others.join(" and ")}` : ""}.`
+                  : "Nobody was seen holding it before the memory was stranded."),
+     "memory still held with nobody running anything — the last person on the card left the lights on"],
   ];
   document.getElementById("gputrophies").innerHTML = GPU_TROPHIES.map(([title, key, val, tip, desc]) => {
     const a = (b.gpu_awards || {})[key];
@@ -475,15 +771,35 @@ function render(b){
     `· refreshes every ${REFRESH_MS/1000}s`;
 }
 
+let board = null;
+
+function show(next){
+  board = next;
+  render(reveal(next));
+  keyUI();
+}
+
 async function tick(){
   try{
     const r = await fetch("data/board.json?" + Date.now());
-    render(await r.json());
+    const next = await r.json();
+    // A fresh vault is sealed every cycle, so re-open it to keep the command
+    // lines in step with the processes actually running.
+    if (SECRETS && next.vault){
+      try{
+        const v = await fetch("data/vault.json?" + Date.now());
+        SECRETS = await unseal(await v.json(), sessionStorage.getItem("ucl-key")) || SECRETS;
+      }catch(e){ /* keep what we already opened */ }
+    }
+    show(next);
   }catch(e){
     document.getElementById("status").textContent = "could not load board.json";
   }
 }
-tick(); setInterval(tick, REFRESH_MS);
+
+const saved = sessionStorage.getItem("ucl-key");
+tick().then(() => { if (saved && board && board.vault) unlock(saved); });
+setInterval(tick, REFRESH_MS);
 </script>
 </body>
 </html>
