@@ -116,7 +116,8 @@ def _events(recent: list[dict]) -> dict:
   holds: dict[str, float] = defaultdict(float)           # user -> longest single hold (h)
   idle_util: dict[str, list[float]] = defaultdict(list)  # user -> util% while holding
   reboot_claims: dict[str, int] = defaultdict(int)       # user -> cards taken post-reboot
-  flips: dict[str, int] = defaultdict(int)               # host -> times it changed hands
+  flips: dict[str, int] = defaultdict(int)
+  gatecrash: dict[str, int] = defaultdict(int)               # host -> times it changed hands
 
   for previous, current in zip(recent, recent[1:]):
     if not (0 < current["t"] - previous["t"] <= MAX_GAP_SECONDS):
@@ -166,8 +167,8 @@ def _events(recent: list[dict]) -> dict:
     "reboot_rush": [{"user": u, "claims": c}
                     for u, c in sorted(reboot_claims.items(), key=lambda kv: -kv[1])[:5]],
     "squatters": [{"user": u, "util": round(v, 1)} for u, v in squatters[:5]],
-    "hottest_seat": [{"host": h, "flips": c}
-                     for h, c in sorted(flips.items(), key=lambda kv: -kv[1])[:5]],
+    "gatecrasher": [{"user": u, "count": c}
+                    for u, c in sorted(gatecrash.items(), key=lambda kv: -kv[1])[:5]],
   }
 
 def build_board(samples: list[dict]) -> dict:
@@ -240,7 +241,7 @@ def build_board(samples: list[dict]) -> dict:
   utilisation.sort(key=lambda r: -r["busy_pct"])
 
   ev = _events(recent)
-  for key in ("quickest_draw", "longest_hold", "reboot_rush", "squatters"):
+  for key in ("quickest_draw", "longest_hold", "reboot_rush", "squatters", "gatecrasher"):
     for row in ev[key]:
       if key == "squatters":
         row["cards"] = len(live_users.get(row["user"], []))

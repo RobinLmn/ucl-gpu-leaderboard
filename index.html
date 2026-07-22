@@ -242,8 +242,9 @@ function render(b){
     ["🛋️ Prime Squatter", "squatters", r => r.user,
      r => `${r.util}% util on ${r.cards ?? 0} card${r.cards === 1 ? "" : "s"}`,
      "holds cards while barely using them — the true villain"],
-    ["🔄 Hottest Seat", "hottest_seat", r => r.host, r => `${r.flips} changes of hands`,
-     "the card that gets passed around the most"],
+    ["🥷 The Gatecrasher", "gatecrasher", r => r.user,
+     r => `${r.count} time${r.count === 1 ? "" : "s"}`,
+     "jumped onto a card someone else was already using"],
   ];
   document.getElementById("trophies").innerHTML = TROPHIES.map(([title, key, who, val, desc]) => {
     const row = (b.trophies?.[key] || [])[0];
