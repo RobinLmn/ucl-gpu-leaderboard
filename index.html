@@ -52,8 +52,9 @@
   td{padding:9px 10px;border-bottom:1px solid #1e2430;overflow-wrap:anywhere}
   tr:hover td{background:var(--panel-2)}
   .rank{color:var(--dim);width:44px}
-  .bar{height:7px;border-radius:4px;background:var(--blue);min-width:2px}
-  .barcell{width:38%}
+  .track{flex:1;max-width:190px;height:7px;border-radius:4px;background:#1e2430;overflow:hidden}
+  .bar{height:100%;border-radius:4px;background:var(--blue);min-width:2px}
+  .barcell{width:34%}
   .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;
          border:1px solid var(--line);margin-right:4px;color:var(--muted);white-space:nowrap}
 
@@ -190,9 +191,9 @@ function render(b){
       <td class="rank">${i+1}</td>
       <td><strong>${r.user}</strong></td>
       <td class="barcell">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="bar" style="width:${Math.max(2, 100*r.hours/max)}%"></div>
-          <span style="color:var(--muted)">${fmt(r.hours)}</span>
+        <div style="display:flex;align-items:center;gap:9px">
+          <div class="track"><div class="bar" style="width:${Math.max(2, 100*r.hours/max)}%"></div></div>
+          <span style="color:var(--muted);flex:none">${fmt(r.hours)}</span>
         </div>
       </td>
       <td>${r.live || "—"}</td>
