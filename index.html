@@ -248,6 +248,7 @@ function ago(ts){
    whatever the reader types here. Nothing is sent anywhere: the page derives
    the key locally and either the payload opens or it does not. */
 let SECRETS = null;                 // {users, procs} once unlocked
+let passphrase = null;              // kept in memory; storage is only for reloads
 // Stretching the passphrase costs a second, and the salt is stable between
 // cycles, so the derived key is kept for as long as both stay the same.
 let derived = {salt: null, pass: null, bits: null};
@@ -317,28 +318,43 @@ function keyUI(){
     : "names are salted pseudonyms.";
 }
 
-async function unlock(pass){
+/* Passphrases travel through Notes and Slack, which turn ' into ’ and add a
+   trailing space on paste. Those are typos, not different keys. */
+const tidy = pass => String(pass ?? "")
+  .replace(/[‘’‛]/g, "'").replace(/[“”]/g, '"').trim();
+
+const remember = pass => { try { sessionStorage.setItem("ucl-key", pass); } catch (e) {} };
+const forget = () => { try { sessionStorage.removeItem("ucl-key"); } catch (e) {} };
+const recall = () => { try { return sessionStorage.getItem("ucl-key"); } catch (e) { return null; } };
+
+async function unlock(input){
+  const pass = tidy(input);
   note("unlocking…");
+  let vault;
   try{
     const r = await fetch("data/vault.json?" + Date.now());
-    const opened = await unseal(await r.json(), pass);
-    if (!opened){ note("that key does not open it", true); return false; }
-    SECRETS = opened;
-    sessionStorage.setItem("ucl-key", pass);   // this tab only; cleared on close
-    note("");
-    document.getElementById("keyform").hidden = true;
-    if (board) show(board);
-    return true;
+    if (!r.ok) throw new Error(r.status);
+    vault = await r.json();
   }catch(e){
-    note("no vault published yet", true);
+    note("no vault published yet", true);   // only ever a fetch problem now
     return false;
   }
+  const opened = await unseal(vault, pass);
+  if (!opened){ note("that key does not open it", true); return false; }
+  SECRETS = opened;
+  passphrase = pass;
+  remember(pass);            // survives a reload; a blocked store is not an error
+  note("");
+  document.getElementById("keyform").hidden = true;
+  if (board) show(board);
+  return true;
 }
 
 function lock(){
   SECRETS = null;
+  passphrase = null;
   derived = {salt: null, pass: null, bits: null};
-  sessionStorage.removeItem("ucl-key");
+  forget();
   if (board) show(board);
 }
 
@@ -378,7 +394,14 @@ function renderMap(){
     STATE.map(chip("state", filters.state, filters.state)).join("") +
     `<span class="count">click a card for its nvidia-smi</span>`;
   for (const btn of document.querySelectorAll("#mapfilters button"))
-    btn.onclick = () => { filters[btn.dataset.group] = btn.dataset.key; renderMap(); };
+    btn.onclick = () => {
+      // "all cards" reads as "stop filtering", so it clears both groups
+      if (btn.dataset.group === "family" && btn.dataset.key === "all")
+        filters.family = filters.state = "all";
+      else
+        filters[btn.dataset.group] = btn.dataset.key;
+      renderMap();
+    };
 
   const shown = nodes.filter(n => family(n) && state(n));
   document.getElementById("mapempty").hidden = shown.length > 0;
@@ -788,7 +811,7 @@ async function tick(){
     if (SECRETS && next.vault){
       try{
         const v = await fetch("data/vault.json?" + Date.now());
-        SECRETS = await unseal(await v.json(), sessionStorage.getItem("ucl-key")) || SECRETS;
+        SECRETS = await unseal(await v.json(), passphrase) || SECRETS;
       }catch(e){ /* keep what we already opened */ }
     }
     show(next);
@@ -797,7 +820,7 @@ async function tick(){
   }
 }
 
-const saved = sessionStorage.getItem("ucl-key");
+const saved = recall();
 tick().then(() => { if (saved && board && board.vault) unlock(saved); });
 setInterval(tick, REFRESH_MS);
 </script>
