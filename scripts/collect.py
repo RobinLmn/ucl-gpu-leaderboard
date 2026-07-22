@@ -1,14 +1,3 @@
-"""Sample GPU usage across the UCL CS teaching labs and append it to a history file.
-
-The lab machines are only reachable through the SSH gateway, so a public page cannot poll
-them. This runs wherever there is SSH access, appends one snapshot per invocation to
-``data/history.jsonl``, and rebuilds ``data/board.json`` — the single file the site reads.
-
-Read-only: it runs ``nvidia-smi`` and ``ps``, and never starts, stops or touches a job.
-
-  python scripts/collect.py            # take one sample
-  python scripts/collect.py --loop 300 # keep sampling every 5 minutes
-"""
 from __future__ import annotations
 
 import argparse
@@ -22,14 +11,10 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-# Read from the environment so no username or hostname is ever committed. Set these in a
-# local .env (gitignored):  UCL_GATEWAY=user@gateway.example.ac.uk  UCL_USER=user
 GATEWAY = os.environ.get("UCL_GATEWAY", "")
 USER = os.environ.get("UCL_USER", "")
 DOMAIN = os.environ.get("UCL_DOMAIN", "")
 
-# lab105 machines are named after duck breeds, lab121 after fish. barbury-l is a 3090 Ti
-# that is not listed on the TSG page at all.
 LAB105 = ["aylesbury-l", "barnacle-l", "brent-l", "bufflehead-l", "cackling-l", "canada-l",
           "crested-l", "eider-l", "gadwall-l", "goosander-l", "gressingham-l", "harlequin-l",
           "mallard-l", "mandarin-l", "pintail-l", "pocher-l", "ruddy-l", "scaup-l",
@@ -47,18 +32,12 @@ HISTORY = ROOT / "data" / "history.jsonl"
 BOARD = ROOT / "data" / "board.json"
 NAMES = ROOT / "data" / "names.local.json"
 
-# Real usernames identify real people, and the board is published on the open web. Every
-# name is replaced by a stable handle derived from a locally generated salt, so the ranking
-# still works but nothing outside this machine can recover who anyone is. The salt and the
-# mapping live only in gitignored files.
 HANDLE_ADJECTIVES = ["Feral", "Nocturnal", "Caffeinated", "Unhinged", "Sleepless", "Rogue",
                      "Turbo", "Silent", "Greedy", "Cursed", "Radiant", "Spectral"]
 HANDLE_NOUNS = ["Gremlin", "Goblin", "Wizard", "Kraken", "Badger", "Phantom", "Yak",
                 "Otter", "Basilisk", "Moth", "Warlock", "Heron"]
 
-
 def handle_for(user: str) -> str:
-  """Stable, salted pseudonym. Not reversible without the local salt file."""
   names = json.loads(NAMES.read_text()) if NAMES.exists() else {}
   salt = names.setdefault("_salt", secrets.token_hex(16))
   mapping = names.setdefault("users", {})
@@ -77,8 +56,6 @@ def handle_for(user: str) -> str:
   NAMES.write_text(json.dumps(names, indent=1))
   return mapping[user]
 
-# A sample older than this is ignored when accumulating GPU-hours, so a laptop that was
-# asleep for six hours does not credit anyone with six hours of imaginary compute.
 MAX_GAP_SECONDS = 20 * 60
 WEEK_SECONDS = 7 * 24 * 3600
 
@@ -92,7 +69,6 @@ nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader 2>/dev/nul
 done
 """
 
-
 def ssh(host: str, script: str, timeout: int = 45) -> str:
   cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
          "-o", "StrictHostKeyChecking=no", "-o", f"ProxyJump={GATEWAY}",
@@ -103,15 +79,12 @@ def ssh(host: str, script: str, timeout: int = 45) -> str:
   except (subprocess.TimeoutExpired, OSError):
     return ""
 
-
 def short_model(name: str) -> str:
   if "3090" in name: return "RTX 3090 Ti"
   if "4070" in name: return "RTX 4070 Ti S"
   return name.replace("NVIDIA GeForce ", "").strip() or "unknown"
 
-
 def probe(host: str, tries: int = 2) -> dict:
-  """Sample one host. An unreachable host is recorded as such, never as idle."""
   for _ in range(tries):
     out = ssh(host, PROBE)
     if "REACHED" in out:
@@ -131,21 +104,12 @@ def probe(host: str, tries: int = 2) -> dict:
               "users": sorted(set(users)), "mem": mem, "util": util}
   return {"host": host, "state": "unreachable", "gpu": "unknown", "users": [], "mem": 0, "util": 0}
 
-
 def sample() -> dict:
   with futures.ThreadPoolExecutor(max_workers=14) as pool:
     hosts = list(pool.map(probe, HOSTS))
   return {"t": int(time.time()), "hosts": hosts}
 
-
 def _events(recent: list[dict]) -> dict:
-  """Derive the fun statistics from transitions between consecutive samples.
-
-  Everything here comes from watching a card change hands: how long it sat idle before
-  someone took it, who took it, and how long they kept it. Samples more than
-  MAX_GAP_SECONDS apart are treated as a break in coverage, so nothing is inferred across
-  a gap where the collector was not running.
-  """
   free_since: dict[str, int] = {}        # host -> when it last became free
   holder_since: dict[tuple, int] = {}    # (host, user) -> when they took it
   draws: dict[str, list[float]] = defaultdict(list)      # user -> seconds-to-claim
@@ -161,7 +125,6 @@ def _events(recent: list[dict]) -> dict:
     before = {h["host"]: h for h in previous["hosts"]}
     when = current["t"]
     local = time.localtime(when)
-    # Lab PCs reboot Monday and Thursday evenings; the scramble afterwards is its own event.
     post_reboot = local.tm_wday in (0, 3, 1, 4) and (local.tm_hour < 9 or local.tm_hour >= 19)
 
     for host in current["hosts"]:
@@ -207,9 +170,7 @@ def _events(recent: list[dict]) -> dict:
                      for h, c in sorted(flips.items(), key=lambda kv: -kv[1])[:5]],
   }
 
-
 def build_board(samples: list[dict]) -> dict:
-  """Turn the raw history into everything the page needs."""
   now = int(time.time())
   recent = [s for s in samples if now - s["t"] <= WEEK_SECONDS]
   latest = samples[-1] if samples else {"t": now, "hosts": []}
@@ -290,7 +251,6 @@ def build_board(samples: list[dict]) -> dict:
     "peak": peak,
   }
 
-
 def main() -> None:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("--loop", type=int, default=0, help="seconds between samples (0 = once)")
@@ -317,7 +277,6 @@ def main() -> None:
     if not args.loop:
       return
     time.sleep(args.loop)
-
 
 if __name__ == "__main__":
   main()
