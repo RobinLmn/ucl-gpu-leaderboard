@@ -58,6 +58,7 @@ def handle_for(user: str) -> str:
   return mapping[user]
 
 MAX_GAP_SECONDS = 20 * 60
+REBOOT_DOWN_SECONDS = 6 * 60
 WEEK_SECONDS = 7 * 24 * 3600
 
 PROBE = r"""
@@ -137,7 +138,9 @@ def _events(recent: list[dict]) -> dict:
   draws: dict[str, list[float]] = defaultdict(list)      # user -> seconds-to-claim
   holds: dict[str, float] = defaultdict(float)           # user -> longest single hold (h)
   idle_util: dict[str, list[float]] = defaultdict(list)  # user -> util% while holding
-  reboot_claims: dict[str, int] = defaultdict(int)       # user -> cards taken post-reboot
+  reboot_claims: dict[str, int] = defaultdict(int)       # user -> first onto a machine that just came back
+  came_back: set[str] = set()                            # back from a real outage, unclaimed
+  down_since: dict[str, int] = {}
   gatecrash: dict[str, int] = defaultdict(int)           # user -> cards joined while occupied
 
   for previous, current in zip(recent, recent[1:]):
@@ -146,14 +149,21 @@ def _events(recent: list[dict]) -> dict:
       continue
     before = {h["host"]: h for h in previous["hosts"]}
     when = current["t"]
-    local = time.localtime(when)
-    post_reboot = local.tm_wday in (0, 3, 1, 4) and (local.tm_hour < 9 or local.tm_hour >= 19)
 
     for host in current["hosts"]:
       name, users = host["host"], set(host["users"])
       was = before.get(name)
-      if host["state"] != "up" or was is None:
+      if host["state"] != "up":
+        down_since.setdefault(name, when)
         continue
+      if was is None:
+        continue
+      if was["state"] != "up":
+        went_down = down_since.pop(name, None)
+        if went_down is not None and when - went_down >= REBOOT_DOWN_SECONDS:
+          came_back.add(name)      # a blink of SSH is not a reboot
+      else:
+        down_since.pop(name, None)
       old_users = set(was["users"])
 
       if not old_users and not users:
@@ -165,8 +175,9 @@ def _events(recent: list[dict]) -> dict:
           gatecrash[user] += 1
         if name in free_since:
           draws[user].append(max(0, when - free_since[name]))
-        if post_reboot:
+        if name in came_back:
           reboot_claims[user] += 1
+          came_back.discard(name)
         holder_since[(name, user)] = when
         free_since.pop(name, None)
       for user in old_users - users:         # let go
@@ -324,12 +335,30 @@ def build_board(samples: list[dict]) -> dict:
         row["cards"] = len(live_users.get(row["user"], []))
       row["user"] = handle_for(row["user"])
 
+  claimed_at: dict[tuple, int] = {}
+  holding: dict[str, set] = {}
+  for snap in recent:
+    for host in snap["hosts"]:
+      if host["state"] != "up":
+        continue
+      current_users = set(host["users"])
+      for user in current_users - holding.get(host["host"], set()):
+        claimed_at[(host["host"], user)] = snap["t"]
+      holding[host["host"]] = current_users
+
+  def arrivals(host: str, users: list[str]) -> list[dict]:
+    ranked = sorted(users, key=lambda u: claimed_at.get((host, u), 0))
+    first = claimed_at.get((host, ranked[0]), 0) if ranked else 0
+    return [{"user": handle_for(u), "since": claimed_at.get((host, u)),
+             "crasher": claimed_at.get((host, u), 0) > first}
+            for u in ranked]
+
   now_sharers = {h["host"]: h["users"] for h in latest["hosts"] if h.get("users")}
   contested = sorted(
     ({"host": host, "gpu": host_model.get(host, "unknown"), "peak": peak_n,
       "peak_users": [handle_for(u) for u in share_who.get(host, [])],
       "now": len(now_sharers.get(host, [])),
-      "now_users": [handle_for(u) for u in now_sharers.get(host, [])]}
+      "now_users": arrivals(host, now_sharers.get(host, []))}
      for host, peak_n in share_peak.items() if peak_n > 0),
     key=lambda r: (-r["peak"], -r["now"], r["host"]))
 

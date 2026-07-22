@@ -235,13 +235,22 @@ function render(b){
     </tr>`).join("")
     || `<tr><td colspan="5" style="color:var(--dim)">nothing recorded yet</td></tr>`;
 
+  const stamp = t => t ? new Date(t*1000).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})
+                      : "before the board started watching";
+  const sharers = c => {
+    const list = (c.now_users && c.now_users.length)
+      ? c.now_users : (c.peak_users || []).map(u => ({user: u, crasher: false, since: null}));
+    return list.map(u => `<span title="${u.user} took ${c.host} at ${stamp(u.since)}${
+      u.crasher ? " — after someone else was already on it" : ""}">${
+      u.crasher ? "🥷 " : ""}${u.user}</span>`).join(", ");
+  };
   const contested = (b.contested || []).filter(c => c.peak > 1);
   document.getElementById("hot").innerHTML = contested.slice(0,6).map(c => `
     <tr title="${c.host} peaked at ${c.peak} simultaneous users">
       <td><strong>${c.host.replace(/-l$/,"")}</strong><div style="color:var(--dim);font-size:10px">${c.gpu}</div></td>
       <td><strong>${c.peak}</strong><span style="color:var(--dim)"> at once</span>
           ${c.now > 1 ? `<div style="color:var(--blue);font-size:10px">${c.now} right now</div>` : ""}</td>
-      <td style="color:var(--muted)">${c.peak_users.join(", ")}</td>
+      <td style="color:var(--muted)">${sharers(c)}</td>
     </tr>`).join("")
     || `<tr><td colspan="3" style="color:var(--dim)">nobody is sharing a card yet</td></tr>`;
 
