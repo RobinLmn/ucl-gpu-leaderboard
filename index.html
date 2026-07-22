@@ -57,16 +57,17 @@
   .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;
          border:1px solid var(--line);margin-right:4px;color:var(--muted);white-space:nowrap}
 
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:7px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:7px}
   .node{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 9px;
         font-size:11px;cursor:default;transition:transform .1s;min-width:0}
   .node:hover{transform:translateY(-2px);border-color:var(--muted)}
-  .node .h{font-weight:700;font-size:12px}
+  .node .h{font-weight:700;font-size:12px;overflow-wrap:anywhere;word-break:break-all}
   .node .g{color:var(--dim);font-size:10px;margin-top:1px}
   .node.free{border-left:3px solid var(--green)}
   .node.busy{border-left:3px solid var(--blue)}
   .node.down{border-left:3px solid var(--dim);opacity:.55}
-  .node .u{color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
+  .node .u{color:var(--muted);margin-top:4px;font-size:10px;line-height:1.35;
+           overflow-wrap:anywhere;word-break:break-all}
 
   .trophies{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
   .trophy{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
