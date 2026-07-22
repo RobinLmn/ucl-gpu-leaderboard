@@ -186,15 +186,22 @@ function render(b){
     : `the last ${Math.max(1, Math.round(wh*60))} min`;
   document.getElementById("podium").innerHTML = lb.slice(0,3).map((r,i) =>
     `<div class="plinth ${cls[i]}"><div class="medal">${medals[i]}</div>
-     <div class="who">${r.user}</div>
+     <div class="who" title="${heldBy(r.user)}">${r.user}</div>
      <div class="hrs">${fmt(r.hours)} gpu-h · ${r.live} live now</div></div>`).join("")
     || `<div class="plinth"><div class="hrs">no data yet — the collector has just started</div></div>`;
+
+  const holdings = {};
+  for (const h of b.live.busy)
+    for (const u of h.users) (holdings[u] ||= []).push(`${h.host} (${h.gpu})`);
+  const heldBy = u => holdings[u]
+    ? `${u} is on ${holdings[u].length} card${holdings[u].length > 1 ? "s" : ""} right now:\n· ${holdings[u].join("\n· ")}`
+    : `${u} has nothing running right now.`;
 
   const max = Math.max(...lb.map(r => r.hours), 1);
   document.getElementById("rows").innerHTML = lb.map((r,i) => `
     <tr>
       <td class="rank">${i+1}</td>
-      <td><strong>${r.user}</strong></td>
+      <td><strong title="${heldBy(r.user)}">${r.user}</strong></td>
       <td class="barcell">
         <div style="display:flex;align-items:center;gap:9px">
           <div class="track"><div class="bar" style="width:${Math.max(2, 100*r.hours/max)}%"></div></div>
