@@ -238,8 +238,8 @@ function render(b){
   const stamp = t => t ? new Date(t*1000).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})
                       : "before the board started watching";
   const sharers = c => {
-    const list = (c.now_users && c.now_users.length)
-      ? c.now_users : (c.peak_users || []).map(u => ({user: u, crasher: false, since: null}));
+    const raw = (c.now_users && c.now_users.length) ? c.now_users : (c.peak_users || []);
+    const list = raw.map(u => typeof u === "string" ? {user: u, crasher: false, since: null} : u);
     return list.map(u => `<span title="${u.user} took ${c.host} at ${stamp(u.since)}${
       u.crasher ? " — after someone else was already on it" : ""}">${
       u.crasher ? "🥷 " : ""}${u.user}</span>`).join(", ");
