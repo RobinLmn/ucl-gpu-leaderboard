@@ -58,7 +58,6 @@ def handle_for(user: str) -> str:
   return mapping[user]
 
 MAX_GAP_SECONDS = 20 * 60
-REBOOT_DOWN_SECONDS = 6 * 60
 GATECRASH_UTIL = 15
 WEEK_SECONDS = 7 * 24 * 3600
 
@@ -133,6 +132,19 @@ def sample() -> dict:
     h.pop("clock", None)
   return {"t": t, "hosts": hosts}
 
+def _in_reboot_window(when: int) -> bool:
+  """The labs restart Monday and Thursday evenings, 19:30 to midnight.
+
+  The claim itself may land in the small hours that follow, so the window runs
+  on into Tuesday / Friday morning.
+  """
+  lt = time.localtime(when)
+  if lt.tm_wday in (0, 3):
+    return lt.tm_hour > 19 or (lt.tm_hour == 19 and lt.tm_min >= 30)
+  if lt.tm_wday in (1, 4):
+    return lt.tm_hour < 9
+  return False
+
 def _events(recent: list[dict]) -> dict:
   free_since: dict[str, int] = {}        # host -> when it last became free
   holder_since: dict[tuple, int] = {}    # (host, user) -> when they took it
@@ -140,8 +152,7 @@ def _events(recent: list[dict]) -> dict:
   holds: dict[str, float] = defaultdict(float)           # user -> longest single hold (h)
   idle_util: dict[str, list[float]] = defaultdict(list)  # user -> util% while holding
   reboot_claims: dict[str, int] = defaultdict(int)       # user -> first onto a machine that just came back
-  came_back: set[str] = set()                            # back from a real outage, unclaimed
-  down_since: dict[str, int] = {}
+  came_back: set[str] = set()                            # freshly restarted, still unclaimed
   gatecrash: dict[str, int] = defaultdict(int)           # user -> cards joined while actually in use
 
   for previous, current in zip(recent, recent[1:]):
@@ -150,21 +161,15 @@ def _events(recent: list[dict]) -> dict:
       continue
     before = {h["host"]: h for h in previous["hosts"]}
     when = current["t"]
+    reboot_time = _in_reboot_window(when)
 
     for host in current["hosts"]:
       name, users = host["host"], set(host["users"])
       was = before.get(name)
-      if host["state"] != "up":
-        down_since.setdefault(name, when)
+      if host["state"] != "up" or was is None:
         continue
-      if was is None:
-        continue
-      if was["state"] != "up":
-        went_down = down_since.pop(name, None)
-        if went_down is not None and when - went_down >= REBOOT_DOWN_SECONDS:
-          came_back.add(name)      # a blink of SSH is not a reboot
-      else:
-        down_since.pop(name, None)
+      if reboot_time and (was["state"] != "up" or (was["users"] and not users)):
+        came_back.add(name)        # back from the restart, or wiped clean by it
       old_users = set(was["users"])
 
       if not old_users and not users:
@@ -176,7 +181,7 @@ def _events(recent: list[dict]) -> dict:
           gatecrash[user] += 1
         if name in free_since:
           draws[user].append(max(0, when - free_since[name]))
-        if name in came_back:
+        if reboot_time and name in came_back:
           reboot_claims[user] += 1
           came_back.discard(name)
         holder_since[(name, user)] = when
