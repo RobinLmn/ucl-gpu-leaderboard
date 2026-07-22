@@ -67,6 +67,13 @@
   .node.down{border-left:3px solid var(--dim);opacity:.55}
   .node .u{color:var(--muted);margin-top:4px;word-break:break-word}
 
+  .trophies{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
+  .trophy{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .trophy .t{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  .trophy .w{font-size:16px;font-weight:700;margin:7px 0 3px;word-break:break-word}
+  .trophy .v{color:var(--blue);font-size:13px}
+  .trophy .d{color:var(--dim);font-size:11px;margin-top:6px;line-height:1.45}
+  .trophy .none{color:var(--dim);font-size:12px;margin-top:7px}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
   @media(max-width:720px){.two{grid-template-columns:1fr}.podium{grid-template-columns:1fr}}
   footer{margin-top:44px;color:var(--dim);font-size:11px;text-align:center;line-height:1.8}
@@ -94,6 +101,9 @@
     </tr></thead>
     <tbody id="rows"></tbody>
   </table></div>
+
+  <h2>🏅 Trophy cabinet</h2>
+  <div class="trophies" id="trophies"></div>
 
   <div class="two">
     <div>
@@ -203,6 +213,27 @@ function render(b){
       <div class="g">${n.gpu}</div>
       <div class="u">${n.k === "busy" ? n.users.join(", ") : n.k === "free" ? "idle" : "no reply"}</div>
     </div>`).join("");
+
+  const secs = s => s < 90 ? `${s}s` : `${Math.round(s/60)} min`;
+  const TROPHIES = [
+    ["⚡ Quickest Draw", "quickest_draw", r => `${r.user}`, r => `${secs(r.seconds)} after it freed`,
+     "smallest gap between a card being released and someone claiming it"],
+    ["🏰 The Landlord", "longest_hold", r => r.user, r => `${r.hours}h unbroken`,
+     "longest single stretch holding one card without letting go"],
+    ["🏁 Reboot Rush", "reboot_rush", r => r.user, r => `${r.claims} cards claimed`,
+     "cards grabbed during the Monday / Thursday reboot scramble"],
+    ["🛋️ Prime Squatter", "squatters", r => r.user, r => `${r.util}% average utilisation`,
+     "holds cards while barely using them — the true villain"],
+    ["🔄 Hottest Seat", "hottest_seat", r => r.host, r => `${r.flips} changes of hands`,
+     "the card that gets passed around the most"],
+  ];
+  document.getElementById("trophies").innerHTML = TROPHIES.map(([title, key, who, val, desc]) => {
+    const row = (b.trophies?.[key] || [])[0];
+    return `<div class="trophy"><div class="t">${title}</div>` +
+      (row ? `<div class="w">${who(row)}</div><div class="v">${val(row)}</div>`
+           : `<div class="none">no contender yet</div>`) +
+      `<div class="d">${desc}</div></div>`;
+  }).join("");
 
   document.getElementById("meta").textContent =
     `${b.samples} samples over ${b.window_hours}h · ${live.unreachable.length} machines unreachable ` +

@@ -138,6 +138,76 @@ def sample() -> dict:
   return {"t": int(time.time()), "hosts": hosts}
 
 
+def _events(recent: list[dict]) -> dict:
+  """Derive the fun statistics from transitions between consecutive samples.
+
+  Everything here comes from watching a card change hands: how long it sat idle before
+  someone took it, who took it, and how long they kept it. Samples more than
+  MAX_GAP_SECONDS apart are treated as a break in coverage, so nothing is inferred across
+  a gap where the collector was not running.
+  """
+  free_since: dict[str, int] = {}        # host -> when it last became free
+  holder_since: dict[tuple, int] = {}    # (host, user) -> when they took it
+  draws: dict[str, list[float]] = defaultdict(list)      # user -> seconds-to-claim
+  holds: dict[str, float] = defaultdict(float)           # user -> longest single hold (h)
+  idle_util: dict[str, list[float]] = defaultdict(list)  # user -> util% while holding
+  reboot_claims: dict[str, int] = defaultdict(int)       # user -> cards taken post-reboot
+  flips: dict[str, int] = defaultdict(int)               # host -> times it changed hands
+
+  for previous, current in zip(recent, recent[1:]):
+    if not (0 < current["t"] - previous["t"] <= MAX_GAP_SECONDS):
+      free_since.clear(); holder_since.clear()
+      continue
+    before = {h["host"]: h for h in previous["hosts"]}
+    when = current["t"]
+    local = time.localtime(when)
+    # Lab PCs reboot Monday and Thursday evenings; the scramble afterwards is its own event.
+    post_reboot = local.tm_wday in (0, 3, 1, 4) and (local.tm_hour < 9 or local.tm_hour >= 19)
+
+    for host in current["hosts"]:
+      name, users = host["host"], set(host["users"])
+      was = before.get(name)
+      if host["state"] != "up" or was is None:
+        continue
+      old_users = set(was["users"])
+
+      if not old_users and not users:
+        free_since.setdefault(name, when)
+      if old_users and not users:            # released
+        free_since[name] = when
+        flips[name] += 1
+      for user in users - old_users:         # claimed
+        if name in free_since:
+          draws[user].append(max(0, when - free_since[name]))
+        if post_reboot:
+          reboot_claims[user] += 1
+        holder_since[(name, user)] = when
+        free_since.pop(name, None)
+      for user in old_users - users:         # let go
+        started = holder_since.pop((name, user), None)
+        if started:
+          holds[user] = max(holds[user], (when - started) / 3600.0)
+      for user in users:                     # still holding
+        idle_util[user].append(host["util"])
+        started = holder_since.get((name, user))
+        if started:
+          holds[user] = max(holds[user], (when - started) / 3600.0)
+
+  quickest = sorted(((u, min(v)) for u, v in draws.items() if v), key=lambda kv: kv[1])
+  squatters = sorted(((u, sum(v) / len(v)) for u, v in idle_util.items() if len(v) >= 6),
+                     key=lambda kv: kv[1])
+  return {
+    "quickest_draw": [{"user": u, "seconds": int(s)} for u, s in quickest[:5]],
+    "longest_hold": [{"user": u, "hours": round(h, 1)}
+                     for u, h in sorted(holds.items(), key=lambda kv: -kv[1])[:5]],
+    "reboot_rush": [{"user": u, "claims": c}
+                    for u, c in sorted(reboot_claims.items(), key=lambda kv: -kv[1])[:5]],
+    "squatters": [{"user": u, "util": round(v, 1)} for u, v in squatters[:5]],
+    "hottest_seat": [{"host": h, "flips": c}
+                     for h, c in sorted(flips.items(), key=lambda kv: -kv[1])[:5]],
+  }
+
+
 def build_board(samples: list[dict]) -> dict:
   """Turn the raw history into everything the page needs."""
   now = int(time.time())
@@ -198,8 +268,14 @@ def build_board(samples: list[dict]) -> dict:
   ]
   utilisation.sort(key=lambda r: -r["busy_pct"])
 
+  ev = _events(recent)
+  for key in ("quickest_draw", "longest_hold", "reboot_rush", "squatters"):
+    for row in ev[key]:
+      row["user"] = handle_for(row["user"])
+
   return {
     "generated": now,
+    "trophies": ev,
     "window_hours": round((recent[-1]["t"] - recent[0]["t"]) / 3600.0, 2) if len(recent) > 1 else 0.0,
     "samples": len(recent),
     "leaderboard": leaderboard,
