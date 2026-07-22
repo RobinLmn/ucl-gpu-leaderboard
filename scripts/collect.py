@@ -97,7 +97,7 @@ def probe(host: str, tries: int = 2) -> dict:
   for _ in range(tries):
     out = ssh(host, PROBE)
     if "REACHED" in out:
-      gpu, users, mem, util, clock = "unknown", [], 0, 0, 0
+      gpu, users, mem, mem_total, util, clock = "unknown", [], 0, 0, 0, 0
       for line in out.splitlines():
         if line.startswith("GPU|"):
           parts = [p.strip() for p in line[4:].split(",")]
@@ -105,15 +105,17 @@ def probe(host: str, tries: int = 2) -> dict:
             gpu = short_model(parts[0])
           if len(parts) >= 4:
             mem = int(parts[1].split()[0])
+            mem_total = int(parts[2].split()[0])
             util = int(parts[3].split()[0])
         elif line.startswith("TIME|"):
           clock = int(line[5:].strip() or 0)
         elif line.startswith("PROC|"):
           _, user, _ = (line.split("|") + ["", ""])[:3]
           users.append(user)
-      return {"host": host, "state": "up", "gpu": gpu,
-              "users": sorted(set(users)), "mem": mem, "util": util, "clock": clock}
-  return {"host": host, "state": "unreachable", "gpu": "unknown", "users": [], "mem": 0, "util": 0, "clock": 0}
+      return {"host": host, "state": "up", "gpu": gpu, "users": sorted(set(users)),
+              "mem": mem, "mem_total": mem_total, "util": util, "clock": clock}
+  return {"host": host, "state": "unreachable", "gpu": "unknown", "users": [],
+          "mem": 0, "mem_total": 0, "util": 0, "clock": 0}
 
 def cluster_time(hosts: list[dict]) -> int:
   """Median clock across reachable machines, falling back to the local one.
@@ -285,6 +287,57 @@ def build_board(samples: list[dict]) -> dict:
     if len(live_people) > peak["users"]:
       peak = {"gpus": live, "users": len(live_people), "t": current["t"]}
 
+  restarts: dict[str, int] = defaultdict(int)
+  seen_on: dict[str, set] = defaultdict(set)
+  user_on_host: dict[tuple, float] = defaultdict(float)
+  for previous, current in zip(recent, recent[1:]):
+    gap = current["t"] - previous["t"]
+    if gap <= 0 or gap > MAX_GAP_SECONDS:
+      continue
+    was = {h["host"]: h for h in previous["hosts"]}
+    for host in current["hosts"]:
+      if host["state"] != "up":
+        continue
+      before = was.get(host["host"])
+      if before is None:
+        continue
+      if before["state"] != "up" or (before["users"] and not host["users"]):
+        restarts[host["host"]] += 1
+      for user in host["users"]:
+        seen_on[host["host"]].add(user)
+        user_on_host[(host["host"], user)] += gap / 3600.0
+
+  def _award(host, extra):
+    return dict(extra, host=host, gpu=host_model.get(host, "unknown"))
+
+  awards = {}
+  if restarts:
+    host, count = max(restarts.items(), key=lambda kv: (kv[1], kv[0]))
+    if count:
+      awards["unstable"] = _award(host, {"restarts": count})
+  visited = {h: len(u) for h, u in seen_on.items() if u}
+  if visited:
+    busy_h = lambda h: host_busy.get(h, 0.0)
+    host = max(visited, key=lambda h: (visited[h], busy_h(h)))
+    awards["crowded"] = _award(host, {"users": visited[host], "hours": round(busy_h(host), 1)})
+    host = min(visited, key=lambda h: (visited[h], -busy_h(h)))
+    awards["exclusive"] = _award(host, {"users": visited[host], "hours": round(busy_h(host), 1)})
+  user_total: dict[str, float] = defaultdict(float)
+  for (_, user), hours in user_on_host.items():
+    user_total[user] += hours
+  loyal = None
+  for (host, user), hours in user_on_host.items():
+    total = user_total[user]
+    if total <= 0:
+      continue
+    share = hours / total
+    if loyal is None or (share, hours) > (loyal["share"], loyal["hours"]):
+      loyal = {"host": host, "user": user, "share": share, "hours": hours}
+  if loyal:
+    awards["loyal"] = _award(loyal["host"], {"user": handle_for(loyal["user"]),
+                                             "share": round(100 * loyal["share"]),
+                                             "hours": round(loyal["hours"], 1)})
+
   hoard: dict[str, int] = defaultdict(int)
   hoard_when: dict[str, int] = {}
   for snap in recent:
@@ -375,14 +428,17 @@ def build_board(samples: list[dict]) -> dict:
                "past": [dict(row) for row in season["past"][-6:]]},
     "trophies": ev,
     "contested": contested[:8],
+    "gpu_awards": awards,
     "window_hours": round((recent[-1]["t"] - recent[0]["t"]) / 3600.0, 2) if len(recent) > 1 else 0.0,
     "samples": len(recent),
     "leaderboard": leaderboard,
     "live": {
-      "free": [{"host": h["host"], "gpu": h["gpu"]} for h in free],
+      "free": [{"host": h["host"], "gpu": h["gpu"], "mem": h["mem"],
+                "mem_total": h.get("mem_total", 0), "util": h["util"]} for h in free],
       "busy": [{"host": h["host"], "gpu": h["gpu"],
                 "users": [handle_for(u) for u in h["users"]],
-                "mem": h["mem"], "util": h["util"]} for h in busy],
+                "mem": h["mem"], "mem_total": h.get("mem_total", 0),
+                "util": h["util"]} for h in busy],
       "unreachable": unreachable,
     },
     "hosts": utilisation,

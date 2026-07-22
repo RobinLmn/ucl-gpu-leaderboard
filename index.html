@@ -73,6 +73,7 @@
   .node.free{border-left:3px solid var(--green)}
   .node.busy{border-left:3px solid var(--blue)}
   .node.down{border-left:3px solid var(--dim);opacity:.55}
+  .node .m{font-size:10px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
   .node .u{color:var(--muted);margin-top:4px;font-size:10px;line-height:1.35;
            overflow-wrap:anywhere;word-break:break-all}
 
@@ -129,6 +130,9 @@
       <div class="scroll"><table><tbody id="cold"></tbody></table></div>
     </div>
   </div>
+
+  <h2>🎖️ GPU trophies</h2>
+  <div class="trophies" id="gputrophies"></div>
 
   <h2>🗺️ The lab, right now</h2>
   <div class="grid" id="map"></div>
@@ -261,6 +265,7 @@ function render(b){
   document.getElementById("cold").innerHTML = ranked.slice(-6).reverse().map(hostRow).join("")
     || `<tr><td style="color:var(--dim)">not enough samples yet</td></tr>`;
 
+  const gb = mb => mb >= 1024 ? `${(mb/1024).toFixed(1)}G` : `${mb || 0}M`;
   const nodes = [
     ...live.busy.map(h => ({...h, k:"busy"})),
     ...live.free.map(h => ({...h, k:"free"})),
@@ -271,6 +276,8 @@ function render(b){
       <div class="h">${n.host.replace(/-l$/,"")}</div>
       <div class="g">${n.gpu}</div>
       <div class="u">${n.k === "busy" ? n.users.join(", ") : n.k === "free" ? "idle" : "no reply"}</div>
+      ${n.k === "down" ? "" : `<div class="m">${n.util ?? 0}% &middot; ${gb(n.mem)}${
+        n.mem_total ? ` / ${gb(n.mem_total)}` : ""}</div>`}
     </div>`).join("");
 
   const secs = s => s < 90 ? `${s}s` : `${Math.round(s/60)} min`;
@@ -297,6 +304,29 @@ function render(b){
       (row ? `<div class="w">${who(row)}</div><div class="v">${val(row)}</div>`
            : `<div class="none">no contender yet</div>`) +
       `<div class="d">${desc}</div></div>`;
+  }).join("");
+
+  const card = h => h ? h.host.replace(/-l$/, "") : "";
+  const GPU_TROPHIES = [
+    ["💥 Most Unstable", "unstable", a => `${a.restarts} restart${a.restarts === 1 ? "" : "s"}`,
+     a => `Unstable: ${card(a)} restarted ${a.restarts} time${a.restarts === 1 ? "" : "s"} this season`,
+     "went down and came back more than any other card"],
+    ["🎪 Grand Central", "crowded", a => `${a.users} different people`,
+     a => `Grand Central: ${a.users} different people used ${card(a)} this season (${a.hours}h busy)`,
+     "the card the most different people passed through"],
+    ["🚪 Private Club", "exclusive", a => `${a.users} person${a.users === 1 ? "" : "s"} only`,
+     a => `Private Club: only ${a.users} person${a.users === 1 ? "" : "s"} touched ${card(a)} this season (${a.hours}h busy)`,
+     "the card the fewest different people touched"],
+    ["💍 Best Friends", "loyal", a => a.user,
+     a => `Best friends: ${a.user} spent ${a.share}% of all their GPU time on ${card(a)} (${a.hours}h)`,
+     "the person who runs nearly everything on one single card"],
+  ];
+  document.getElementById("gputrophies").innerHTML = GPU_TROPHIES.map(([title, key, val, tip, desc]) => {
+    const a = (b.gpu_awards || {})[key];
+    return `<div class="trophy" title="${a ? tip(a) : desc}"><div class="t">${title}</div>` +
+      (a ? `<div class="w">${card(a)}</div><div class="v">${val(a)}</div>`
+         : `<div class="none">no contender yet</div>`) +
+      `<div class="d">${a ? a.gpu : desc}</div></div>`;
   }).join("");
 
   document.getElementById("meta").textContent =
