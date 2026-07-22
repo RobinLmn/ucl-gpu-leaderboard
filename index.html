@@ -167,7 +167,7 @@ function render(b){
     [busyGpus, "GPUs in use"],
     [lb.length, "challengers"],
     [fmt(totalHours), "gpu-hours tracked"],
-    [b.peak.users || 0, "peak simultaneous"],
+    [b.peak.users || 0, "peak users at once"],
   ].map(([n, l]) => `<div class="tile"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
 
   const best = {
@@ -252,7 +252,7 @@ function render(b){
 
   document.getElementById("meta").textContent =
     `${b.samples} samples over ${b.window_hours}h · ${live.unreachable.length} machines unreachable ` +
-    `(counted as unknown, never as free) · refreshes every ${REFRESH_MS/1000}s`;
+    `· refreshes every ${REFRESH_MS/1000}s`;
 }
 
 async function tick(){

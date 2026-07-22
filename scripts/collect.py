@@ -179,7 +179,7 @@ def build_board(samples: list[dict]) -> dict:
   host_busy: dict[str, float] = defaultdict(float)
   host_total: dict[str, float] = defaultdict(float)
   host_model: dict[str, str] = {}
-  peak = {"users": 0, "t": None}
+  peak = {"gpus": 0, "users": 0, "t": None}
   night_hours: dict[str, float] = defaultdict(float)
 
   for previous, current in zip(recent, recent[1:]):
@@ -189,6 +189,7 @@ def build_board(samples: list[dict]) -> dict:
     hours = gap / 3600.0
     hour_of_day = time.localtime(current["t"]).tm_hour
     live = 0
+    live_people = set()
     for host in current["hosts"]:
       if host["state"] != "up":
         continue
@@ -197,12 +198,13 @@ def build_board(samples: list[dict]) -> dict:
       if host["users"]:
         host_busy[host["host"]] += hours
         live += 1
+      live_people.update(host["users"])
       for user in host["users"]:
         gpu_hours[user] += hours
         if hour_of_day >= 23 or hour_of_day < 6:
           night_hours[user] += hours
-    if live > peak["users"]:
-      peak = {"users": live, "t": current["t"]}
+    if len(live_people) > peak["users"]:
+      peak = {"gpus": live, "users": len(live_people), "t": current["t"]}
 
   share_peak: dict[str, int] = defaultdict(int)
   share_who: dict[str, list[str]] = {}
