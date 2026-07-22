@@ -59,6 +59,7 @@ def handle_for(user: str) -> str:
 
 MAX_GAP_SECONDS = 20 * 60
 REBOOT_DOWN_SECONDS = 6 * 60
+GATECRASH_UTIL = 15
 WEEK_SECONDS = 7 * 24 * 3600
 
 PROBE = r"""
@@ -141,7 +142,7 @@ def _events(recent: list[dict]) -> dict:
   reboot_claims: dict[str, int] = defaultdict(int)       # user -> first onto a machine that just came back
   came_back: set[str] = set()                            # back from a real outage, unclaimed
   down_since: dict[str, int] = {}
-  gatecrash: dict[str, int] = defaultdict(int)           # user -> cards joined while occupied
+  gatecrash: dict[str, int] = defaultdict(int)           # user -> cards joined while actually in use
 
   for previous, current in zip(recent, recent[1:]):
     if not (0 < current["t"] - previous["t"] <= MAX_GAP_SECONDS):
@@ -171,7 +172,7 @@ def _events(recent: list[dict]) -> dict:
       if old_users and not users:            # released
         free_since[name] = when
       for user in users - old_users:         # claimed
-        if old_users:                        # someone was already on it
+        if old_users and was["util"] > GATECRASH_UTIL:   # busy, not just parked
           gatecrash[user] += 1
         if name in free_since:
           draws[user].append(max(0, when - free_since[name]))
