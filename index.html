@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UCL GPU Leaderboard</title>
+<style>
+  /* Deliberately a single dark "arcade cabinet" look rather than a theme-aware page. */
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel-2:#1c2230; --line:#2a3140;
+    --ink:#e8edf5; --muted:#93a1b5; --dim:#5f6c80;
+    --blue:#3B82C4; --green:#2E9E6B;
+    --gold:#d9a441; --silver:#a8b3c4; --bronze:#b5763f;
+    --hot:#c9553d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  a{color:var(--blue)}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 18px 80px}
+
+  header{text-align:center;margin-bottom:26px}
+  h1{margin:0;font-size:clamp(26px,5vw,44px);letter-spacing:2px;
+     text-shadow:0 0 18px rgba(59,130,196,.45)}
+  .sub{color:var(--muted);margin-top:6px;font-size:13px}
+  .pill{display:inline-flex;align-items:center;gap:7px;margin-top:12px;padding:5px 13px;
+        border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:12px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+       box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:26px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .tile .n{font-size:30px;font-weight:700;line-height:1.1}
+  .tile .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);
+     margin:30px 0 12px;border-bottom:1px solid var(--line);padding-bottom:7px}
+
+  .podium{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:end}
+  .plinth{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+          padding:16px 12px;text-align:center;position:relative}
+  .plinth.p1{border-color:var(--gold);box-shadow:0 0 26px rgba(217,164,65,.16)}
+  .plinth.p2{border-color:var(--silver)} .plinth.p3{border-color:var(--bronze)}
+  .medal{font-size:26px} .who{font-weight:700;margin:6px 0 2px;font-size:14px;word-break:break-word}
+  .hrs{color:var(--muted);font-size:12px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{color:var(--muted);text-align:left;font-weight:500;font-size:11px;
+     text-transform:uppercase;letter-spacing:1px;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:9px 10px;border-bottom:1px solid #1e2430}
+  tr:hover td{background:var(--panel-2)}
+  .rank{color:var(--dim);width:44px}
+  .bar{height:7px;border-radius:4px;background:var(--blue);min-width:2px}
+  .barcell{width:38%}
+  .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;
+         border:1px solid var(--line);margin-right:4px;color:var(--muted);white-space:nowrap}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:7px}
+  .node{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 9px;
+        font-size:11px;cursor:default;transition:transform .1s}
+  .node:hover{transform:translateY(-2px);border-color:var(--muted)}
+  .node .h{font-weight:700;font-size:12px}
+  .node .g{color:var(--dim);font-size:10px;margin-top:1px}
+  .node.free{border-left:3px solid var(--green)}
+  .node.busy{border-left:3px solid var(--blue)}
+  .node.down{border-left:3px solid var(--dim);opacity:.55}
+  .node .u{color:var(--muted);margin-top:4px;word-break:break-word}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:720px){.two{grid-template-columns:1fr}.podium{grid-template-columns:1fr}}
+  footer{margin-top:44px;color:var(--dim);font-size:11px;text-align:center;line-height:1.8}
+  .scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>UCL GPU LEADERBOARD</h1>
+    <div class="sub">a completely unofficial ranking of who is hogging the teaching-lab GPUs</div>
+    <div class="pill"><span class="dot"></span><span id="status">loading…</span></div>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <h2>🏆 Podium — GPU-hours in the tracking window</h2>
+  <div class="podium" id="podium"></div>
+
+  <h2>📊 Full standings</h2>
+  <div class="scroll"><table id="board">
+    <thead><tr>
+      <th class="rank">#</th><th>challenger</th><th class="barcell">gpu-hours</th>
+      <th>live</th><th>titles</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+
+  <div class="two">
+    <div>
+      <h2>🔥 Most contested cards</h2>
+      <div class="scroll"><table><tbody id="hot"></tbody></table></div>
+    </div>
+    <div>
+      <h2>🧊 Loneliest cards</h2>
+      <div class="scroll"><table><tbody id="cold"></tbody></table></div>
+    </div>
+  </div>
+
+  <h2>🗺️ The lab, right now</h2>
+  <div class="grid" id="map"></div>
+
+  <footer>
+    <div id="meta"></div>
+    <div>names are salted pseudonyms — the mapping never leaves the collecting machine.</div>
+    <div>read-only <code>nvidia-smi</code> sampling · no job is ever started, stopped or touched.</div>
+  </footer>
+</div>
+
+<script>
+const REFRESH_MS = 60000;
+const fmt = h => h >= 10 ? h.toFixed(0) : h.toFixed(1);
+
+function ago(ts){
+  const s = Math.max(0, Math.floor(Date.now()/1000 - ts));
+  if (s < 90) return s + "s ago";
+  if (s < 5400) return Math.round(s/60) + "m ago";
+  return Math.round(s/3600) + "h ago";
+}
+
+function titles(row, best){
+  const t = [];
+  if (row.user === best.hours)  t.push("👑 GPU Overlord");
+  if (row.user === best.night && row.night > 0.2) t.push("🦉 Night Owl");
+  if (row.user === best.live && row.live > 1) t.push("🐙 Octopus");
+  if (row.live === 0 && row.hours > 0) t.push("👻 Ghost");
+  if (row.hours > 0 && row.hours < 1) t.push("🐣 Tourist");
+  return t;
+}
+
+function render(b){
+  const live = b.live, lb = b.leaderboard;
+  const busyGpus = live.busy.length, freeGpus = live.free.length;
+
+  document.getElementById("status").textContent =
+    `${freeGpus} free · ${busyGpus} in use · updated ${ago(b.generated)}`;
+
+  const totalHours = lb.reduce((a, r) => a + r.hours, 0);
+  document.getElementById("tiles").innerHTML = [
+    [freeGpus, "GPUs free"],
+    [busyGpus, "GPUs in use"],
+    [lb.length, "challengers"],
+    [fmt(totalHours), "gpu-hours tracked"],
+    [b.peak.users || 0, "peak simultaneous"],
+  ].map(([n, l]) => `<div class="tile"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+
+  // Superlatives are computed once and reused, so a tie always resolves the same way.
+  const best = {
+    hours: lb[0]?.user,
+    night: lb.slice().sort((a,b2)=>b2.night-a.night)[0]?.user,
+    live:  lb.slice().sort((a,b2)=>b2.live-a.live)[0]?.user,
+  };
+
+  const medals = ["🥇","🥈","🥉"], cls = ["p1","p2","p3"];
+  document.getElementById("podium").innerHTML = lb.slice(0,3).map((r,i) =>
+    `<div class="plinth ${cls[i]}"><div class="medal">${medals[i]}</div>
+     <div class="who">${r.user}</div>
+     <div class="hrs">${fmt(r.hours)} gpu-h · ${r.live} live now</div></div>`).join("")
+    || `<div class="plinth"><div class="hrs">no data yet — the collector has just started</div></div>`;
+
+  const max = Math.max(...lb.map(r => r.hours), 1);
+  document.getElementById("rows").innerHTML = lb.map((r,i) => `
+    <tr>
+      <td class="rank">${i+1}</td>
+      <td><strong>${r.user}</strong></td>
+      <td class="barcell">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="bar" style="width:${Math.max(2, 100*r.hours/max)}%"></div>
+          <span style="color:var(--muted)">${fmt(r.hours)}</span>
+        </div>
+      </td>
+      <td>${r.live || "—"}</td>
+      <td>${titles(r, best).map(t => `<span class="badge">${t}</span>`).join("") || "—"}</td>
+    </tr>`).join("")
+    || `<tr><td colspan="5" style="color:var(--dim)">nothing recorded yet</td></tr>`;
+
+  const hostRow = h => `<tr><td><strong>${h.host}</strong></td>
+      <td style="color:var(--dim)">${h.gpu}</td>
+      <td style="text-align:right;color:var(--muted)">${h.busy_pct}% busy</td></tr>`;
+  const ranked = b.hosts.filter(h => h.hours > 0);
+  document.getElementById("hot").innerHTML  = ranked.slice(0,6).map(hostRow).join("")
+    || `<tr><td style="color:var(--dim)">not enough samples yet</td></tr>`;
+  document.getElementById("cold").innerHTML = ranked.slice(-6).reverse().map(hostRow).join("")
+    || `<tr><td style="color:var(--dim)">not enough samples yet</td></tr>`;
+
+  const nodes = [
+    ...live.busy.map(h => ({...h, k:"busy"})),
+    ...live.free.map(h => ({...h, k:"free"})),
+    ...live.unreachable.map(h => ({host:h, gpu:"—", k:"down", users:[]})),
+  ];
+  document.getElementById("map").innerHTML = nodes.map(n => `
+    <div class="node ${n.k}" title="${n.k === 'down' ? 'unreachable' : n.gpu}">
+      <div class="h">${n.host.replace(/-l$/,"")}</div>
+      <div class="g">${n.gpu}</div>
+      <div class="u">${n.k === "busy" ? n.users.join(", ") : n.k === "free" ? "idle" : "no reply"}</div>
+    </div>`).join("");
+
+  document.getElementById("meta").textContent =
+    `${b.samples} samples over ${b.window_hours}h · ${live.unreachable.length} machines unreachable ` +
+    `(counted as unknown, never as free) · refreshes every ${REFRESH_MS/1000}s`;
+}
+
+async function tick(){
+  try{
+    const r = await fetch("data/board.json?" + Date.now());
+    render(await r.json());
+  }catch(e){
+    document.getElementById("status").textContent = "could not load board.json";
+  }
+}
+tick(); setInterval(tick, REFRESH_MS);
+</script>
+</body>
+</html>

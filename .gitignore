@@ -1,0 +1,17 @@
+# Never publish credentials or anything identifying the operator or the cluster.
+# Note: gitignore has no trailing-comment syntax, so every comment gets its own line.
+.env
+config.local.json
+
+# pseudonym -> real username mapping, plus the salt
+data/names.local.json
+
+# raw samples: real usernames and hostnames
+data/history.jsonl
+data/collector.log
+
+# key material, in case anything ever lands here
+*.pem
+*.key
+id_*
+known_hosts
