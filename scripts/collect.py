@@ -204,6 +204,14 @@ def build_board(samples: list[dict]) -> dict:
     if live > peak["users"]:
       peak = {"users": live, "t": current["t"]}
 
+  share_peak: dict[str, int] = defaultdict(int)
+  share_who: dict[str, list[str]] = {}
+  for snap in recent:
+    for host in snap["hosts"]:
+      if host["state"] == "up" and len(host["users"]) > share_peak[host["host"]]:
+        share_peak[host["host"]] = len(host["users"])
+        share_who[host["host"]] = list(host["users"])
+
   live_users: dict[str, list[str]] = defaultdict(list)
   free, busy, unreachable = [], [], []
   for host in latest["hosts"]:
@@ -234,9 +242,19 @@ def build_board(samples: list[dict]) -> dict:
     for row in ev[key]:
       row["user"] = handle_for(row["user"])
 
+  now_sharers = {h["host"]: h["users"] for h in latest["hosts"] if h.get("users")}
+  contested = sorted(
+    ({"host": host, "gpu": host_model.get(host, "unknown"), "peak": peak_n,
+      "peak_users": [handle_for(u) for u in share_who.get(host, [])],
+      "now": len(now_sharers.get(host, [])),
+      "now_users": [handle_for(u) for u in now_sharers.get(host, [])]}
+     for host, peak_n in share_peak.items() if peak_n > 0),
+    key=lambda r: (-r["peak"], -r["now"], r["host"]))
+
   return {
     "generated": now,
     "trophies": ev,
+    "contested": contested[:8],
     "window_hours": round((recent[-1]["t"] - recent[0]["t"]) / 3600.0, 2) if len(recent) > 1 else 0.0,
     "samples": len(recent),
     "leaderboard": leaderboard,
