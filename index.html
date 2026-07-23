@@ -1011,11 +1011,13 @@ const rid = () => Math.random().toString(36).slice(2, 8);
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];   // N, E, S, W as [dx, dy]
 // STUN for direct connections, plus a free public TURN relay so peers behind
 // stricter NATs (different networks/campus wifi) can still reach each other.
+const TURN_USER = "bf4eec7d4d30287e067691ba", TURN_CRED = "iCbwSlIamaEx83oF";
 const PEER_OPTS = { debug: 1, config: { iceServers: [
-  { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
-  { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
-  { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
-  { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
+  { urls: ["stun:stun.l.google.com:19302", "stun:stun.relay.metered.ca:80"] },
+  { urls: "turn:global.relay.metered.ca:80", username: TURN_USER, credential: TURN_CRED },
+  { urls: "turn:global.relay.metered.ca:80?transport=tcp", username: TURN_USER, credential: TURN_CRED },
+  { urls: "turn:global.relay.metered.ca:443", username: TURN_USER, credential: TURN_CRED },
+  { urls: "turns:global.relay.metered.ca:443?transport=tcp", username: TURN_USER, credential: TURN_CRED },
 ] } };
 const dlog = (...a) => { try{ console.log("[duel]", ...a); }catch(e){} };
 // log the underlying WebRTC ICE state so a stuck connection is diagnosable,
