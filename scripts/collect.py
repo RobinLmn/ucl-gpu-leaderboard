@@ -376,7 +376,8 @@ def _series(window: list[dict]) -> list[dict]:
     bucket = buckets.setdefault(slot, {})
     for family in FAMILIES.values():
       bucket.setdefault(family, [])
-    totals = {family: {"util": 0, "mem": 0.0, "busy": 0, "procs": 0, "up": 0}
+    totals = {family: {"util": 0, "mem": 0.0, "busy": 0, "procs": 0, "up": 0,
+                       "temp": 0.0, "temp_n": 0}
               for family in FAMILIES.values()}
     for host in snap["hosts"]:
       if host["state"] != "up":
@@ -391,6 +392,10 @@ def _series(window: list[dict]) -> list[dict]:
       row["procs"] += host.get("procs", len(host["users"]))
       if host["users"]:
         row["busy"] += 1
+      temp = host.get("temp") or 0
+      if temp:                          # cards that didn't report a temp sit out
+        row["temp"] += temp
+        row["temp_n"] += 1
     for family, row in totals.items():
       if row["up"]:
         bucket[family].append(row)
@@ -408,6 +413,10 @@ def _series(window: list[dict]) -> list[dict]:
         "busy": round(sum(r["busy"] for r in rows) / n, 1),
         "procs": round(sum(r["procs"] for r in rows) / n, 1),
       }
+      hot = [r for r in rows if r["temp_n"]]
+      if hot:
+        point[family]["temp"] = round(
+          sum(r["temp"] / r["temp_n"] for r in hot) / len(hot), 1)
     points.append(point)
   return points
 

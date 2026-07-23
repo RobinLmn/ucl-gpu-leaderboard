@@ -85,6 +85,16 @@
   .filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
   .filters .sep{width:1px;height:16px;background:var(--line);margin:0 5px}
   .filters .count{color:var(--dim);font-size:11px;margin-left:auto}
+  .mapsearch{position:relative;margin:0 0 9px;max-width:340px}
+  .mapsearch input{width:100%;background:var(--panel-2);color:var(--ink);
+    border:1px solid var(--line);border-radius:999px;padding:7px 30px 7px 13px;
+    font:inherit;font-size:12px}
+  .mapsearch input::placeholder{color:var(--dim)}
+  .mapsearch input:focus{outline:none;border-color:var(--ink)}
+  .mapsearch .clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    background:none;border:0;color:var(--dim);cursor:pointer;font-size:15px;
+    line-height:1;padding:2px 6px}
+  .mapsearch .clear:hover{color:var(--ink)}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:7px}
   .node{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 9px;
@@ -203,6 +213,11 @@
   <div class="trophies four" id="gputrophies"></div>
 
   <h2>🗺️ The lab, right now</h2>
+  <div class="mapsearch">
+    <input id="mapsearch" type="search" autocomplete="off" spellcheck="false"
+           placeholder="🔍 find someone's cards — type a name (or handle)">
+    <button class="clear" id="mapsearchclear" hidden aria-label="clear search">×</button>
+  </div>
   <div class="filters" id="mapfilters"></div>
   <div class="grid" id="map"></div>
   <div class="empty" id="mapempty" hidden>no cards match that filter</div>
@@ -378,15 +393,23 @@ const FAMILY = [["all", "all cards", () => true],
 const STATE = [["all", "any state", () => true],
                ["free", "idle", n => n.k === "free"],
                ["busy", "in use", n => n.k === "busy"]];
-const filters = {family: "all", state: "all"};
+const filters = {family: "all", state: "all", query: ""};
 let nodes = [];
+
+// A card matches the search when anyone on it matches — real name when unlocked,
+// pseudonym otherwise, since `nodes` already carries whatever is on screen.
+function whoMatch(n){
+  const q = filters.query.trim().toLowerCase();
+  if (!q) return true;
+  return (n.users || []).some(u => u.toLowerCase().includes(q));
+}
 
 function renderMap(){
   const family = FAMILY.find(f => f[0] === filters.family)[2];
   const state = STATE.find(f => f[0] === filters.state)[2];
   const chip = (group, key, active) => ([id, label, test]) =>
     `<button data-group="${group}" data-key="${id}" aria-pressed="${id === active}">${label}` +
-    `<span style="opacity:.6"> ${nodes.filter(n => test(n) && (group === "family"
+    `<span style="opacity:.6"> ${nodes.filter(n => test(n) && whoMatch(n) && (group === "family"
       ? state(n) : family(n))).length}</span></button>`;
   document.getElementById("mapfilters").innerHTML =
     FAMILY.map(chip("family", filters.family, filters.family)).join("") +
@@ -403,8 +426,12 @@ function renderMap(){
       renderMap();
     };
 
-  const shown = nodes.filter(n => family(n) && state(n));
-  document.getElementById("mapempty").hidden = shown.length > 0;
+  const shown = nodes.filter(n => family(n) && state(n) && whoMatch(n));
+  const empty = document.getElementById("mapempty");
+  empty.hidden = shown.length > 0;
+  empty.textContent = filters.query.trim()
+    ? `no cards in use by anyone matching “${filters.query.trim()}”`
+    : "no cards match that filter";
   document.getElementById("map").innerHTML = shown.map(n => `
     <button class="node ${n.k}" data-host="${esc(n.host)}"
             title="${n.k === 'down' ? 'unreachable' : esc(n.gpu) + ' — click for details'}">
@@ -488,6 +515,21 @@ document.getElementById("sheet").onclick = e => {
   if (e.target.id === "sheet") closeSheet();
 };
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+/* ---- search the lab by user -------------------------------------------- */
+const searchBox = document.getElementById("mapsearch");
+const searchClear = document.getElementById("mapsearchclear");
+searchBox.oninput = () => {
+  filters.query = searchBox.value;
+  searchClear.hidden = !searchBox.value;
+  renderMap();
+};
+searchClear.onclick = () => {
+  searchBox.value = filters.query = "";
+  searchClear.hidden = true;
+  searchBox.focus();
+  renderMap();
+};
 
 let userMarks = {}, gpuMarks = {};
 const marks = (table, key) => (table[key] || [])
@@ -737,6 +779,7 @@ function render(b){
   const SERIES = [["rtx4070", "RTX 4070 Ti S", "#3B82C4"], ["rtx3090", "RTX 3090 Ti", "#C9713D"]];
   const METRICS = [["util", "Utilisation", v => `${v.toFixed(0)}%`],
                    ["mem", "Memory", v => `${v.toFixed(0)} GB`],
+                   ["temp", "Temperature", v => `${v.toFixed(0)}°C`],
                    ["busy", "GPUs in use", v => v.toFixed(0)],
                    ["procs", "Processes", v => v.toFixed(0)]];
   let metric = window.__metric || "util";
@@ -779,7 +822,7 @@ function render(b){
     }
 
     for (const [key, , colour] of SERIES) {
-      const path = points.filter(p => p[key]).map((p, i) =>
+      const path = points.filter(p => p[key] && p[key][metric] != null).map((p, i) =>
         `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(p[key][metric]).toFixed(1)}`).join(" ");
       if (path) out += `<path d="${path}" fill="none" stroke="${colour}" stroke-width="2"
         stroke-linejoin="round" stroke-linecap="round"/>`;
@@ -801,7 +844,7 @@ function render(b){
       const when = new Date(best.t*1000);
       tip.innerHTML = `<strong>${DAY[when.getDay()]} ${String(when.getHours()).padStart(2,"0")}:${
         String(when.getMinutes()).padStart(2,"0")}</strong><br>` +
-        SERIES.map(([k, label, colour]) => best[k]
+        SERIES.map(([k, label, colour]) => best[k] && best[k][metric] != null
           ? `<span style="color:${colour}">&#9632;</span> ${label}: ${fmt(best[k][metric])}` : "")
           .filter(Boolean).join("<br>");
       tip.style.opacity = "1";
