@@ -230,6 +230,20 @@
   .arena .keys kbd{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;
     padding:1px 6px;font:inherit;font-size:11px;color:var(--ink)}
   .arena .tag{color:var(--hot);font-weight:700;margin-top:10px}
+  /* on-screen controls (phones): d-pad left, shoot right */
+  .arena .pad{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    max-width:330px;margin:14px auto 2px;touch-action:none}
+  .arena .dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:4px}
+  .arena .pb{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;color:var(--ink);
+    font:inherit;font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    -webkit-user-select:none;user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+  .arena .pb:active{background:var(--ink);color:var(--bg)}
+  .arena .dpad .up{grid-area:1/2}
+  .arena .dpad .left{grid-area:2/1}
+  .arena .dpad .right{grid-area:2/3}
+  .arena .dpad .down{grid-area:3/2}
+  .arena .pb.shoot{width:76px;height:76px;border-radius:50%;font-size:30px;
+    background:linear-gradient(180deg,#c9553d,#a53f2c);border-color:#7d2e20;color:#fff}
 </style>
 </head>
 <body>
@@ -1012,6 +1026,7 @@ const arena = document.getElementById("arena");
 const arenaBody = document.getElementById("arenabody");
 const rid = () => Math.random().toString(36).slice(2, 8);
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];   // N, E, S, W as [dx, dy]
+const MATCH_STEPS = 640;                            // ~90s at 140ms/tick, then it's a draw
 // STUN for direct connections, plus a free public TURN relay so peers behind
 // stricter NATs (different networks/campus wifi) can still reach each other.
 const TURN_USER = "bf4eec7d4d30287e067691ba", TURN_CRED = "iCbwSlIamaEx83oF";
@@ -1050,7 +1065,7 @@ const P2P_HINT = "couldn't establish a direct connection. on one computer, two d
 
 const Duel = {
   role: null, peer: null, conns: new Map(), conn: null, roomId: null,
-  gpu: "", challenger: "", myId: null, fighters: new Map(),
+  gpu: "", challenger: "", myId: null, fighters: new Map(), roles: new Map(), spectateOnly: false,
   match: null, matchTimer: null, view: null, playing: false, finished: false, ready: false,
 
   // remembered display name, best-effort
@@ -1068,9 +1083,10 @@ const Duel = {
     this.role = this.peer = this.conn = this.roomId = null;
     this.match = null; this.matchTimer = null; this.view = null;
     this.playing = false; this.finished = false;
-    this.conns = new Map(); this.fighters = new Map();
-    this.ready = false;
+    this.conns = new Map(); this.fighters = new Map(); this.roles = new Map();
+    this.spectateOnly = false; this.ready = false;
   },
+  fighterCount(){ let n = 0; for (const r of this.roles.values()) if (r === "fighter") n++; return n; },
   close(){ this.reset(); arena.hidden = true; },
 
   /* ---- host ------------------------------------------------------------ */
@@ -1078,7 +1094,7 @@ const Duel = {
     this.reset();
     this.role = "host"; this.gpu = gpu; this.myId = "host";
     this.challenger = this.savedName();          // blank until they type their own
-    this.fighters.set("host", this.challenger);
+    this.fighters.set("host", this.challenger); this.roles.set("host", "fighter");
     this.open(); this.renderConnecting("opening a room…");
     try{ await loadPeer(); }catch(e){ return this.renderError(e.message); }
     const roomId = "uclgpu-" + rid() + rid();
@@ -1097,7 +1113,8 @@ const Duel = {
       dlog("host got a connection from", conn.peer);
       watchIce(conn, () => arena.hidden);
       conn.on("open", () => { dlog("host data channel open →", conn.peer); this.conns.set(conn.peer, conn);
-        conn.send({ t: "hello", challenger: this.challenger, gpu: this.gpu }); });
+        conn.send({ t: "hello", challenger: this.challenger, gpu: this.gpu,
+          spectateOnly: this.playing || this.fighterCount() >= 2 }); });
       conn.on("data", d => this.onGuest(conn, d));
       conn.on("close", () => this.dropGuest(conn.peer));
       conn.on("error", () => this.dropGuest(conn.peer));
@@ -1116,21 +1133,28 @@ const Duel = {
     if (!d || typeof d.t !== "string") return;
     if (d.t === "join"){
       this.fighters.set(conn.peer, this.clean(d.name));
+      // honour their choice, but the 1v1 caps fighters at 2 and a live match is watch-only
+      const canFight = d.role !== "spectator" && !this.playing && this.fighterCount() < 2;
+      this.roles.set(conn.peer, canFight ? "fighter" : "spectator");
       this.broadcastRoster();
-      if (!this.playing) this.renderHostLobby();
+      if (this.playing){                                        // joined mid-match → send the match to watch
+        try{ conn.send({ t: "start", N: this.match.N, walls: this.match.walls.join(""),
+          players: this.view.players, time: this.view.time }); }catch(e){}
+      } else this.renderHostLobby();
     } else if (d.t === "input"){
       this.applyInput(conn.peer, d);
     }
   },
   dropGuest(id){
-    this.fighters.delete(id); this.conns.delete(id);
+    this.fighters.delete(id); this.conns.delete(id); this.roles.delete(id);
     this.broadcastRoster();
     if (this.match && this.match.players.has(id)) this.match.players.get(id).alive = false;
     if (!this.playing && this.role === "host" && !this.finished) this.renderHostLobby();
   },
   broadcast(msg){ for (const c of this.conns.values()){ try{ c.send(msg); }catch(e){} } },
   broadcastRoster(){
-    this.broadcast({ t: "roster", fighters: [...this.fighters].map(([id, name]) => ({ id, name })) });
+    this.broadcast({ t: "roster", fighters: [...this.fighters].map(([id, name]) =>
+      ({ id, name, role: this.roles.get(id) || "spectator" })) });
   },
 
   /* ---- paintball match (host is the authoritative server) -------------- */
@@ -1164,19 +1188,19 @@ const Duel = {
     return chosen;
   },
   startMatch(){
-    const ids = [...this.fighters.keys()];
-    if (ids.length < 2) return;
-    const combatants = ids.slice(0, 2);                 // 1v1 — first two in; the rest spectate
+    const combatants = [...this.fighters.keys()].filter(id => this.roles.get(id) === "fighter").slice(0, 2);
+    if (combatants.length < 2) return;
     const N = 15, walls = this.genMaze(N), sp = this.pickSpawns(walls, N, combatants.length);
     const players = new Map();
     combatants.forEach((id, i) => { const [x, y] = sp[i] || [1, 1];
       players.set(id, { name: this.fighters.get(id), x, y, face: Math.floor(Math.random() * 4),
                         alive: true, want: null, fire: false }); });
-    this.match = { N, walls, players, bullets: [], over: false };
+    this.match = { N, walls, players, bullets: [], over: false, steps: 0 };
     this.playing = true; this.finished = false;
+    this.buildView();
     this.broadcast({ t: "start", N, walls: walls.join(""),
-      players: [...players].map(([id, p]) => [id, p.x, p.y, p.face, 1]) });
-    this.buildView(); this.renderWindow();
+      players: this.view.players, time: this.view.time });
+    this.renderWindow();
     clearInterval(this.matchTimer);
     this.matchTimer = setInterval(() => this.tick(), 140);
   },
@@ -1188,6 +1212,7 @@ const Duel = {
   },
   tick(){
     const m = this.match; if (!m || m.over) return;
+    m.steps++;
     for (const [id, p] of m.players){                               // movement (one cell/tick)
       if (p.alive && p.want != null){
         const [dx, dy] = DIRS[p.want], nx = p.x + dx, ny = p.y + dy;
@@ -1211,10 +1236,12 @@ const Duel = {
     m.bullets = kept;
     this.buildView(); this.broadcastState(); this.renderWindow();
     const alive = [...m.players].filter(([, p]) => p.alive);
-    if (alive.length <= 1){
+    const timeUp = m.steps >= MATCH_STEPS;
+    if (alive.length <= 1 || timeUp){
       m.over = true; this.playing = false; this.finished = true; clearInterval(this.matchTimer);
-      const win = alive.length === 1 ? { id: alive[0][0], name: alive[0][1].name } : { name: null };
-      this.broadcast({ t: "over", id: win.id, name: win.name });
+      const win = alive.length === 1 ? { id: alive[0][0], name: alive[0][1].name }
+                                     : { name: null, why: timeUp ? "timeout" : "mutual" };
+      this.broadcast({ t: "over", id: win.id, name: win.name, why: win.why });
       this.showResult(win);
     }
   },
@@ -1227,9 +1254,11 @@ const Duel = {
     const m = this.match;
     this.view = { N: m.N, walls: m.walls,
       players: [...m.players].map(([id, p]) => [id, p.x, p.y, p.face, p.alive ? 1 : 0]),
-      bullets: m.bullets.map(b => [b.x, b.y, b.dir]) };
+      bullets: m.bullets.map(b => [b.x, b.y, b.dir]),
+      time: Math.max(0, Math.ceil((MATCH_STEPS - m.steps) * 140 / 1000)) };
   },
-  broadcastState(){ this.broadcast({ t: "state", players: this.view.players, bullets: this.view.bullets }); },
+  broadcastState(){ this.broadcast({ t: "state", players: this.view.players,
+    bullets: this.view.bullets, time: this.view.time }); },
 
   /* ---- guest ----------------------------------------------------------- */
   async join(roomId){
@@ -1271,18 +1300,19 @@ const Duel = {
   onHost(d){
     if (!d || typeof d.t !== "string") return;
     if (d.t === "hello"){ this.gotHello = true; clearTimeout(this.connectTimer);
-      this.challenger = this.clean(d.challenger); this.gpu = d.gpu;
+      this.challenger = this.clean(d.challenger); this.gpu = d.gpu; this.spectateOnly = !!d.spectateOnly;
       this.renderChallenge();
     } else if (d.t === "roster"){ this.fighters = new Map(d.fighters.map(f => [f.id, this.clean(f.name)]));
+      this.roles = new Map(d.fighters.map(f => [f.id, f.role || "spectator"]));
       const h = d.fighters.find(f => f.id === "host"); if (h) this.challenger = this.clean(h.name);
       if (!this.playing) this.renderGuestLobby();
     } else if (d.t === "start"){ this.playing = true; this.finished = false;
-      this.view = { N: d.N, walls: d.walls.split("").map(Number), players: d.players, bullets: [] };
+      this.view = { N: d.N, walls: d.walls.split("").map(Number), players: d.players, bullets: [], time: d.time };
       this.renderWindow();
     } else if (d.t === "state" && this.view){ this.view.players = d.players;
-      this.view.bullets = d.bullets; this.renderWindow();
+      this.view.bullets = d.bullets; this.view.time = d.time; this.renderWindow();
     } else if (d.t === "over"){ this.playing = false; this.finished = true;
-      this.showResult({ id: d.id, name: d.name });
+      this.showResult({ id: d.id, name: d.name, why: d.why });
     }
   },
 
@@ -1322,13 +1352,12 @@ const Duel = {
     document.getElementById("bye").onclick = () => this.close(); },
 
   rosterList(exclude){
-    const ids = [...this.fighters.keys()];
     return [...this.fighters].filter(([id]) => id !== exclude).map(([id, name]) =>
       `<li>${esc(name)}${id === this.myId ? ' <span class="you">you</span>' : ""}${
-        ids.indexOf(id) >= 2 ? ' <span class="spec">spectator</span>' : ""}</li>`).join("");
+        this.roles.get(id) === "spectator" ? ' <span class="spec">spectator</span>' : ""}</li>`).join("");
   },
   renderHostLobby(){
-    const n = this.fighters.size;
+    const n = this.fighters.size, fc = this.fighterCount();
     this.frame(`
       <h3>⚔️ Fight for <span class="gpu">${esc(this.gpu)}</span></h3>
       <div class="sub2">a top-down paintball duel — last one standing takes the card.
@@ -1339,11 +1368,11 @@ const Duel = {
       <div class="link"><input type="text" id="shareurl" readonly value="${esc(this.shareUrl())}">
         <button class="ghost" id="copyurl">copy</button></div>
       <ul class="roster">${this.rosterList(this.myId)}</ul>
-      <div class="note">${n < 2 ? "waiting for a challenger to join…"
-        : "1v1 — you fight the first challenger; anyone else spectates the full map. "
+      <div class="note">${fc < 2 ? "waiting for a second fighter to join (others can just watch)…"
+        : "1v1 — two fighters, everyone else watches the full map. "
           + "WASD/arrows move, space shoots — you only see the 5×5 around you."}</div>
-      <button class="go" id="startbtn" ${n < 2 ? "disabled" : ""}>${
-        n < 2 ? "need a challenger" : "🔫 START THE MATCH"}</button>`);
+      <button class="go" id="startbtn" ${fc < 2 ? "disabled" : ""}>${
+        fc < 2 ? "need a second fighter" : "🔫 START THE MATCH"}</button>`);
     const name = document.getElementById("hostname");
     name.oninput = () => { const v = name.value.trim().slice(0, 24);
       this.fighters.set("host", v); this.challenger = v;
@@ -1363,25 +1392,29 @@ const Duel = {
       <div class="sub2">winner takes sole access to the card — it's a joke, nothing happens on the cluster.</div>
       <div class="field">
         <input type="text" id="myname" maxlength="24" placeholder="your username"
-          value="${esc(this.savedName())}">
-        <button class="go" id="acceptbtn">accept the challenge</button></div>
-      <div class="note">a top-down paintball duel: move with WASD/arrows, shoot with space.
-        you only see the 5×5 around you — hunt them down, last one standing wins.</div>`);
+          value="${esc(this.savedName())}"></div>
+      <div class="field">
+        ${this.spectateOnly ? "" : `<button class="go" id="fightbtn2">⚔️ join the fight</button>`}
+        <button class="ghost" id="watchbtn">👁️ just watch</button></div>
+      <div class="note">${this.spectateOnly
+        ? "the 1v1 is already full or underway — you can watch the whole map."
+        : "join in (WASD/arrows move, space shoots, 5×5 view) or just watch the full map."}</div>`);
     const inp = document.getElementById("myname");
-    const go = () => { const v = this.clean(inp.value); this.keepName(v);
-      this.send({ t: "join", name: v }); this.renderGuestLobby(); };
-    document.getElementById("acceptbtn").onclick = go;
-    inp.onkeydown = e => { if (e.key === "Enter") go(); };
+    const go = role => { const v = this.clean(inp.value); this.keepName(v);
+      this.send({ t: "join", name: v, role }); this.renderGuestLobby(); };
+    const fb = document.getElementById("fightbtn2"); if (fb) fb.onclick = () => go("fighter");
+    document.getElementById("watchbtn").onclick = () => go("spectator");
+    inp.onkeydown = e => { if (e.key === "Enter") go(this.spectateOnly ? "spectator" : "fighter"); };
     inp.focus();
   },
   renderGuestLobby(){
-    const spectator = [...this.fighters.keys()].indexOf(this.myId) >= 2;
+    const spectator = this.roles.get(this.myId) === "spectator";
     this.frame(`
       <h3>⚔️ fighting for <span class="gpu">${esc(this.gpu)}</span></h3>
       <ul class="roster">${this.rosterList()}</ul>
       <div class="note">${spectator
-        ? "two fighters are already in — you'll spectate this 1v1 with the whole map in view."
-        : "WASD/arrows to move, space to shoot — 5×5 view."}</div>
+        ? "you're spectating — you'll watch this 1v1 with the whole map in view."
+        : "you're in the fight. WASD/arrows move, space shoots — 5×5 view."}</div>
       <div class="hold">waiting for ${esc(this.challenger)} to start…</div>`);
   },
   // spectators (3rd+ to join) watch the whole 15x15 arena — no fog, nothing to move
@@ -1402,7 +1435,7 @@ const Duel = {
     this.frame(`
       <h3>⚔️ <span class="gpu">${esc(this.gpu)}</span></h3>
       <div class="board full">${cells}</div>
-      <div class="hud"><span>👁️ spectating</span><span>${who}</span></div>`);
+      <div class="hud"><span>👁️ ${who}</span><span>⏱️ ${v.time ?? 0}s</span></div>`);
   },
   renderWindow(){
     const v = this.view; if (!v) return;
@@ -1437,10 +1470,33 @@ const Duel = {
       <div class="board">${cells}</div>
       <div class="compass">north ↑</div>
       <div class="hud"><span><b>${esc(this.fighters.get(this.myId) || "you")}</b></span>
-        <span>${alive} left</span></div>
+        <span>⏱️ ${v.time ?? 0}s${alive > 1 ? "" : ""}</span></div>
       ${salive
-        ? `<div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to move · <kbd>space</kbd> to shoot</div>`
-        : `<div class="tag">💥 tagged — you're out, ${alive} still fighting</div>`}`);
+        ? `<div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to move · <kbd>space</kbd> to shoot</div>
+           <div class="pad">
+             <div class="dpad">
+               <button class="pb up" data-move="0" aria-label="north">↑</button>
+               <button class="pb left" data-move="3" aria-label="west">←</button>
+               <button class="pb right" data-move="1" aria-label="east">→</button>
+               <button class="pb down" data-move="2" aria-label="south">↓</button>
+             </div>
+             <button class="pb shoot" data-fire="1" aria-label="shoot">🎯</button>
+           </div>`
+        : `<div class="tag">💥 tagged — you're out</div>`}`);
+    if (salive) this.wirePad();
+  },
+  wirePad(){
+    for (const b of document.querySelectorAll("#arenabody .pb")){
+      const act = b.dataset.fire ? { fire: true } : { move: +b.dataset.move };
+      let t = null;
+      const start = e => { e.preventDefault(); this.input(act);
+        clearInterval(t); t = setInterval(() => this.input(act), 140); };
+      const stop = () => { clearInterval(t); t = null; };
+      b.addEventListener("pointerdown", start);
+      b.addEventListener("pointerup", stop);
+      b.addEventListener("pointerleave", stop);
+      b.addEventListener("pointercancel", stop);
+    }
   },
   showResult(res){
     const mine = res.name && res.id === this.myId;
@@ -1450,8 +1506,11 @@ const Duel = {
         ? `<div class="win">🏆 ${esc(res.name)} wins${mine ? " — that's you!" : ""}</div>
            <div class="sub2">${esc(res.name)} is the last one standing and now holds sole,
              undisputed, entirely imaginary access to ${esc(this.gpu)}.</div>`
-        : `<div class="win">mutual splatter</div>
-           <div class="sub2">everyone got tagged at once. the GPU keeps itself.</div>`}
+        : res.why === "timeout"
+          ? `<div class="win">⏱️ draw</div>
+             <div class="sub2">time ran out with both still standing — the card stays contested.</div>`
+          : `<div class="win">mutual splatter</div>
+             <div class="sub2">both got tagged at once. the GPU keeps itself.</div>`}
       ${this.role === "host"
         ? `<button class="go" id="rematch">⚔️ rematch</button>`
         : `<div class="note">waiting for a rematch…</div>`}`);
