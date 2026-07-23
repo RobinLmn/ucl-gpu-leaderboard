@@ -206,17 +206,18 @@
   @keyframes flash{0%,100%{opacity:1}50%{opacity:.35}}
   .arena .hold{animation:flash 1.1s ease-in-out infinite;color:var(--muted);font-size:22px;
     letter-spacing:4px}
-  /* 5x5 fog-of-war board */
-  .arena .board{display:grid;grid-template-columns:repeat(5,46px);grid-auto-rows:46px;gap:3px;
-    justify-content:center;margin:16px auto 6px;padding:9px;width:max-content;border-radius:12px;
+  /* 26x26 torch-cone board */
+  .arena .board{display:grid;grid-template-columns:repeat(26,1fr);grid-auto-rows:1fr;gap:1px;
+    width:min(560px,90vw);aspect-ratio:1;margin:14px auto 4px;padding:5px;border-radius:12px;
     background:#080b10;border:1px solid var(--line)}
-  .arena .cell{border-radius:6px;background:#141a24;display:flex;align-items:center;
-    justify-content:center;font-size:24px;line-height:1}
+  .arena .cell{border-radius:2px;background:#141a24;display:flex;align-items:center;
+    justify-content:center;font-size:min(2.1vw,12px);line-height:1;overflow:hidden}
+  .arena .cell.fog{background:#0a0d12}
   .arena .cell.wall{background:#2a3140}
-  .arena .cell.self{background:#1f6b42;color:#eafff3;box-shadow:0 0 0 2px #38c586 inset}
+  .arena .cell.self{background:#1f6b42;color:#eafff3;box-shadow:0 0 0 1px #38c586 inset}
   .arena .cell.self.dead{background:#5a2820;color:#ffd7cd;box-shadow:none}
   .arena .cell.foe{background:#b23f2c;color:#fff}
-  .arena .cell.bullet{color:var(--gold);font-size:30px}
+  .arena .cell.bullet{color:var(--gold)}
   .arena .compass{color:var(--dim);font-size:10px;letter-spacing:3px;text-transform:uppercase;
     text-align:center;margin-top:4px}
   .arena .hud{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
@@ -1160,7 +1161,7 @@ const Duel = {
   startMatch(){
     const ids = [...this.fighters.keys()];
     if (ids.length < 2) return;
-    const N = 15, walls = this.genMaze(N), sp = this.pickSpawns(walls, N, ids.length);
+    const N = 41, walls = this.genMaze(N), sp = this.pickSpawns(walls, N, ids.length);
     const players = new Map();
     ids.forEach((id, i) => { const [x, y] = sp[i] || [1, 1];
       players.set(id, { name: this.fighters.get(id), x, y, face: Math.floor(Math.random() * 4),
@@ -1191,15 +1192,14 @@ const Duel = {
     for (const [id, p] of m.players)                                // fire (one live paintball each)
       if (p.alive && p.fire){ p.fire = false;
         if (!m.bullets.some(b => b.owner === id)) m.bullets.push({ owner: id, x: p.x, y: p.y, dir: p.face }); }
-    const kept = [];                                                // paintballs (two cells/tick)
-    for (const b of m.bullets){ let gone = false;
-      for (let s = 0; s < 2 && !gone; s++){
-        const [dx, dy] = DIRS[b.dir], nx = b.x + dx, ny = b.y + dy;
-        if (this.solid(m.walls, m.N, nx, ny)){ gone = true; break; }
-        b.x = nx; b.y = ny;
-        for (const [id, p] of m.players)
-          if (p.alive && id !== b.owner && p.x === b.x && p.y === b.y){ p.alive = false; gone = true; break; }
-      }
+    const kept = [];                                                // paintballs (one cell/tick)
+    for (const b of m.bullets){                                     // a fresh bullet sits on the
+      const [dx, dy] = DIRS[b.dir], nx = b.x + dx, ny = b.y + dy;   // shooter's cell, so its first
+      if (this.solid(m.walls, m.N, nx, ny)) continue;              // step lands right beside them
+      b.x = nx; b.y = ny;
+      let gone = false;
+      for (const [id, p] of m.players)
+        if (p.alive && id !== b.owner && p.x === b.x && p.y === b.y){ p.alive = false; gone = true; break; }
       if (!gone) kept.push(b);
     }
     m.bullets = kept;
@@ -1382,17 +1382,20 @@ const Duel = {
       return;
     }
     const [, sx, sy, sface, salive] = self, arrows = ["▲", "▶", "▼", "◀"];
-    // egocentric forward cone: 5 deep ahead, 2 to each side, but drawn north-up
-    // (the map never rotates — you sit at the back edge looking into it).
-    let minX, minY;
-    if (sface === 0){ minX = sx - 2; minY = sy - 4; }         // facing N → see north
-    else if (sface === 2){ minX = sx - 2; minY = sy; }        // facing S → see south
-    else if (sface === 1){ minX = sx;     minY = sy - 2; }    // facing E → see east
-    else { minX = sx - 4; minY = sy - 2; }                    // facing W → see west
+    // 26x26 view centred on you. the map never rotates (north stays up); you only
+    // see the "torch" cone in the direction you face, everything else stays dark.
+    const VIEW = 26, C = 13;
     let cells = "";
-    for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++){
-      const x = minX + c, y = minY + r; let cls = "cell", ch = "";
-      if (this.solid(v.walls, v.N, x, y)) cls += " wall";
+    for (let r = 0; r < VIEW; r++) for (let c = 0; c < VIEW; c++){
+      const x = sx + (c - C), y = sy + (r - C), dx = x - sx, dy = y - sy;
+      let f, l;                                               // forward / lateral vs where you look
+      if (sface === 0){ f = -dy; l = dx; }                    // N
+      else if (sface === 1){ f = dx; l = dy; }                // E
+      else if (sface === 2){ f = dy; l = dx; }                // S
+      else { f = -dx; l = dy; }                               // W
+      let cls = "cell", ch = "";
+      if (!(f >= 0 && Math.abs(l) <= f)) cls += " fog";       // outside the torch cone
+      else if (this.solid(v.walls, v.N, x, y)) cls += " wall";
       else if (x === sx && y === sy){ cls += salive ? " self" : " self dead"; ch = salive ? arrows[sface] : "✕"; }
       else { const foe = v.players.find(p => p[4] && p[0] !== self[0] && p[1] === x && p[2] === y);
         if (foe){ cls += " foe"; ch = arrows[foe[3]]; }        // opponent = red triangle, its real facing
