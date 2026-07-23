@@ -1432,10 +1432,12 @@ const Duel = {
       cells += `<div class="${cls}">${ch}</div>`;
     }
     const who = v.players.map(p => `${esc(this.fighters.get(p[0]) || "?")}${p[4] ? "" : " 💥"}`).join("  vs  ");
+    const clock = `⏱️ ${v.time ?? 0}s`;
+    if (this.patchBoard("s", cells, clock)) return;
     this.frame(`
       <h3>⚔️ <span class="gpu">${esc(this.gpu)}</span></h3>
-      <div class="board full">${cells}</div>
-      <div class="hud"><span>👁️ ${who}</span><span>⏱️ ${v.time ?? 0}s</span></div>`);
+      <div class="board full" id="board" data-mode="s">${cells}</div>
+      <div class="hud"><span>👁️ ${who}</span><span id="clock">${clock}</span></div>`);
   },
   renderWindow(){
     const v = this.view; if (!v) return;
@@ -1465,12 +1467,16 @@ const Duel = {
       }
       cells += `<div class="${cls}">${ch}</div>`;
     }
+    // repaint only the cells + clock each tick; never rebuild the pad (its buttons
+    // hold press-and-hold timers — recreating them every tick leaks & auto-moves)
+    const clock = `⏱️ ${v.time ?? 0}s`, mode = salive ? "f1" : "f0";
+    if (this.patchBoard(mode, cells, clock)) return;
     this.frame(`
       <h3>⚔️ <span class="gpu">${esc(this.gpu)}</span></h3>
-      <div class="board">${cells}</div>
+      <div class="board" id="board" data-mode="${mode}">${cells}</div>
       <div class="compass">north ↑</div>
       <div class="hud"><span><b>${esc(this.fighters.get(this.myId) || "you")}</b></span>
-        <span>⏱️ ${v.time ?? 0}s${alive > 1 ? "" : ""}</span></div>
+        <span id="clock">${clock}</span></div>
       ${salive
         ? `<div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to move · <kbd>space</kbd> to shoot</div>
            <div class="pad">
@@ -1484,6 +1490,14 @@ const Duel = {
            </div>`
         : `<div class="tag">💥 tagged — you're out</div>`}`);
     if (salive) this.wirePad();
+  },
+  // returns true if an existing board of this mode was repainted in place
+  patchBoard(mode, cells, clock){
+    const bd = document.getElementById("board");
+    if (!bd || !bd.dataset || bd.dataset.mode !== mode) return false;
+    bd.innerHTML = cells;
+    const cl = document.getElementById("clock"); if (cl) cl.textContent = clock;
+    return true;
   },
   wirePad(){
     for (const b of document.querySelectorAll("#arenabody .pb")){
