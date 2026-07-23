@@ -566,7 +566,7 @@ function openSheet(host){
         usernames are held back — unlock at the top of the page to see them.</div>`}`
       : `<div class="empty">no compute processes on this card</div>`}`;
   const fb = document.getElementById("fightbtn");
-  if (fb) fb.onclick = () => { closeSheet(); Duel.host(node.gpu); };
+  if (fb) fb.onclick = () => { closeSheet(); Duel.host(node.host); };
   document.getElementById("sheet").hidden = false;
 }
 
