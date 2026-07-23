@@ -163,10 +163,17 @@
   .meter i{display:block;height:100%;background:var(--blue)}
 
   /* ---- fight for it (a joke duel over the GPU) --------------------------- */
-  .fightbtn{margin-top:6px;background:linear-gradient(180deg,#c9553d,#a53f2c);color:#fff;
-    border:1px solid #7d2e20;border-radius:8px;padding:8px 14px;font:inherit;font-size:13px;
-    font-weight:600;letter-spacing:.04em;cursor:pointer}
-  .fightbtn:hover{filter:brightness(1.08)}
+  .sheethead{display:flex;justify-content:space-between;align-items:flex-start;
+    gap:12px;flex-wrap:wrap;padding-right:22px}
+  .fightbtn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex:none;
+    background:linear-gradient(180deg,#e0664a,#b23f2c);color:#fff;border:1px solid #7d2e20;
+    border-radius:9px;padding:8px 15px;font:inherit;font-size:12px;font-weight:700;
+    letter-spacing:.09em;text-transform:uppercase;cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 2px 8px rgba(201,85,61,.28);
+    transition:transform .08s, box-shadow .15s, filter .15s}
+  .fightbtn:hover{filter:brightness(1.07);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.16), 0 4px 14px rgba(201,85,61,.42)}
+  .fightbtn:active{transform:translateY(1px)}
   .arena{text-align:center}
   .arena h3{letter-spacing:2px}
   .arena .gpu{color:var(--hot);font-weight:600}
@@ -534,11 +541,16 @@ function openSheet(host){
        nothing running — somebody left the lights on.</div>` : "";
 
   document.getElementById("sheetbody").innerHTML = `
-    <h3 id="sheettitle">${esc(node.host)}</h3>
-    <div class="sub2">${esc(node.gpu)}${node.k === "down" ? " · unreachable" : ""}</div>
-    <div class="meter"><i style="width:${pct}%"></i></div>
-    ${node.k === "down" ? "" :
-      `<button class="fightbtn" id="fightbtn">⚔️ Fight for it</button>`}
+    <div class="sheethead">
+      <div>
+        <h3 id="sheettitle">${esc(node.host)}</h3>
+        <div class="sub2" style="margin-bottom:0">${esc(node.gpu)}${
+          node.k === "down" ? " · unreachable" : ""}</div>
+      </div>
+      ${node.k === "down" ? "" :
+        `<button class="fightbtn" id="fightbtn">⚔️ Fight for it</button>`}
+    </div>
+    <div class="meter" style="margin-top:12px"><i style="width:${pct}%"></i></div>
     <h4>nvidia-smi</h4>
     <div class="kv">${cells.map(([k, v]) =>
       `<div><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("")}</div>
@@ -554,7 +566,7 @@ function openSheet(host){
         usernames are held back — unlock at the top of the page to see them.</div>`}`
       : `<div class="empty">no compute processes on this card</div>`}`;
   const fb = document.getElementById("fightbtn");
-  if (fb) fb.onclick = () => { closeSheet(); Duel.host(node.host, node.gpu); };
+  if (fb) fb.onclick = () => { closeSheet(); Duel.host(node.gpu); };
   document.getElementById("sheet").hidden = false;
 }
 
@@ -1000,10 +1012,10 @@ const Duel = {
   close(){ this.reset(); arena.hidden = true; },
 
   /* ---- host ------------------------------------------------------------ */
-  async host(hostName, gpu, tries){
+  async host(gpu, tries){
     this.reset();
     this.role = "host"; this.gpu = gpu; this.myId = "host";
-    this.challenger = this.clean(this.savedName() || hostName || "the challenger");
+    this.challenger = this.savedName();          // blank until they type their own
     this.fighters.set("host", this.challenger);
     this.open(); this.renderConnecting("opening a room…");
     try{ await loadPeer(); }catch(e){ return this.renderError(e.message); }
@@ -1021,7 +1033,7 @@ const Duel = {
     });
     peer.on("error", err => {
       if (err && err.type === "unavailable-id" && (tries || 0) < 3){
-        return this.host(hostName, gpu, (tries || 0) + 1);       // id clash, retry
+        return this.host(gpu, (tries || 0) + 1);                 // id clash, retry
       }
       this.renderError("the room could not open (" + (err.type || "network") + ").");
     });
@@ -1155,8 +1167,8 @@ const Duel = {
     this.frame(`
       <h3>⚔️ Fight for <span class="gpu">${esc(this.gpu)}</span></h3>
       <div class="sub2">quickest draw wins sole access — a joke, nothing touches the cluster.</div>
-      <div class="field"><input type="text" id="hostname" maxlength="24"
-        value="${esc(this.fighters.get("host"))}" aria-label="your name"></div>
+      <div class="field"><input type="text" id="hostname" maxlength="24" placeholder="your username"
+        value="${esc(this.fighters.get("host"))}" aria-label="your username"></div>
       <div class="note">send this link to a challenger:</div>
       <div class="link"><input type="text" id="shareurl" readonly value="${esc(this.shareUrl())}">
         <button class="ghost" id="copyurl">copy</button></div>
@@ -1166,10 +1178,12 @@ const Duel = {
       <button class="go" id="startbtn" ${n < 2 ? "disabled" : ""}>${
         n < 2 ? "need a challenger" : "🔫 START THE DRAW"}</button>`);
     const name = document.getElementById("hostname");
-    name.oninput = () => { const v = this.clean(name.value); this.fighters.set("host", v);
-      this.keepName(v); this.broadcastRoster(); };
+    name.oninput = () => { const v = name.value.trim().slice(0, 24);
+      this.fighters.set("host", v); this.challenger = v;
+      if (v) this.keepName(v); this.broadcastRoster(); };
     document.getElementById("copyurl").onclick = e => this.copy(e.target);
     document.getElementById("startbtn").onclick = () => this.startRound();
+    if (!this.fighters.get("host")) name.focus();
   },
   renderChallenge(){
     this.frame(`
@@ -1220,7 +1234,6 @@ const Duel = {
              access to ${esc(this.gpu)}.</div>`
         : `<div class="win">nobody drew</div>
            <div class="sub2">everyone flinched. the GPU keeps itself.</div>`}
-      <div class="note">🎭 nothing changed on the real cluster — go negotiate like adults.</div>
       ${this.role === "host"
         ? `<button class="go" id="rematch">⚔️ rematch</button>`
         : `<div class="note">waiting for a rematch…</div>`}`);
