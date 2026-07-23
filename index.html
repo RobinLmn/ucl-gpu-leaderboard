@@ -1123,6 +1123,7 @@ const Duel = {
     if (d.t === "hello"){ this.challenger = this.clean(d.challenger); this.gpu = d.gpu;
       this.renderChallenge();
     } else if (d.t === "roster"){ this.fighters = new Map(d.fighters.map(f => [f.id, this.clean(f.name)]));
+      const h = d.fighters.find(f => f.id === "host"); if (h) this.challenger = this.clean(h.name);
       if (!this.round) this.renderGuestLobby();
     } else if (d.t === "arm"){ this.round = { n: d.round, phase: "armed", drawT: 0, self: null };
       this.renderStage("armed");
@@ -1180,7 +1181,11 @@ const Duel = {
     const name = document.getElementById("hostname");
     name.oninput = () => { const v = name.value.trim().slice(0, 24);
       this.fighters.set("host", v); this.challenger = v;
-      if (v) this.keepName(v); this.broadcastRoster(); };
+      if (v) this.keepName(v); this.broadcastRoster();
+      // refresh the roster line in place — re-rendering the whole lobby would
+      // steal focus from the field being typed into
+      const ul = document.querySelector("#arenabody .roster");
+      if (ul) ul.innerHTML = this.rosterList(); };
     document.getElementById("copyurl").onclick = e => this.copy(e.target);
     document.getElementById("startbtn").onclick = () => this.startRound();
     if (!this.fighters.get("host")) name.focus();
