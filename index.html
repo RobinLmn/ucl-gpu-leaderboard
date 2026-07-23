@@ -217,6 +217,8 @@
   .arena .cell.self.dead{background:#5a2820;color:#ffd7cd;box-shadow:none}
   .arena .cell.foe{background:#b23f2c;color:#fff}
   .arena .cell.bullet{color:var(--gold);font-size:30px}
+  .arena .compass{color:var(--dim);font-size:10px;letter-spacing:3px;text-transform:uppercase;
+    text-align:center;margin-top:4px}
   .arena .hud{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
     width:262px;margin:8px auto 0;color:var(--dim);font-size:12px}
   .arena .hud b{color:var(--green);font-weight:600}
@@ -1380,18 +1382,28 @@ const Duel = {
       return;
     }
     const [, sx, sy, sface, salive] = self, arrows = ["▲", "▶", "▼", "◀"];
+    // egocentric forward cone: 5 deep ahead, 2 to each side, but drawn north-up
+    // (the map never rotates — you sit at the back edge looking into it).
+    let minX, minY;
+    if (sface === 0){ minX = sx - 2; minY = sy - 4; }         // facing N → see north
+    else if (sface === 2){ minX = sx - 2; minY = sy; }        // facing S → see south
+    else if (sface === 1){ minX = sx;     minY = sy - 2; }    // facing E → see east
+    else { minX = sx - 4; minY = sy - 2; }                    // facing W → see west
     let cells = "";
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++){
-      const x = sx + dx, y = sy + dy; let cls = "cell", ch = "";
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++){
+      const x = minX + c, y = minY + r; let cls = "cell", ch = "";
       if (this.solid(v.walls, v.N, x, y)) cls += " wall";
-      else if (dx === 0 && dy === 0){ cls += salive ? " self" : " self dead"; ch = salive ? arrows[sface] : "✕"; }
-      else if (v.players.some(p => p[4] && p[0] !== self[0] && p[1] === x && p[2] === y)){ cls += " foe"; ch = "●"; }
-      else if (v.bullets.some(b => b[0] === x && b[1] === y)) { cls += " bullet"; ch = "•"; }
+      else if (x === sx && y === sy){ cls += salive ? " self" : " self dead"; ch = salive ? arrows[sface] : "✕"; }
+      else { const foe = v.players.find(p => p[4] && p[0] !== self[0] && p[1] === x && p[2] === y);
+        if (foe){ cls += " foe"; ch = arrows[foe[3]]; }        // opponent = red triangle, its real facing
+        else if (v.bullets.some(b => b[0] === x && b[1] === y)){ cls += " bullet"; ch = "•"; }
+      }
       cells += `<div class="${cls}">${ch}</div>`;
     }
     this.frame(`
       <h3>⚔️ <span class="gpu">${esc(this.gpu)}</span></h3>
       <div class="board">${cells}</div>
+      <div class="compass">north ↑</div>
       <div class="hud"><span><b>${esc(this.fighters.get(this.myId) || "you")}</b></span>
         <span>${alive} left</span></div>
       ${salive
