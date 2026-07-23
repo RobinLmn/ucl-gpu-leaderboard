@@ -1012,7 +1012,21 @@ const PEER_OPTS = { debug: 1, config: { iceServers: [
   { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
   { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
   { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+  { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
 ] } };
+const dlog = (...a) => { try{ console.log("[duel]", ...a); }catch(e){} };
+// log the underlying WebRTC ICE state so a stuck connection is diagnosable
+function watchIce(conn, done){
+  const t = setInterval(() => {
+    const pc = conn && conn.peerConnection;
+    if (pc){ dlog("ice:", pc.iceConnectionState, "| gathering:", pc.iceGatheringState);
+      pc.oniceconnectionstatechange = () => dlog("ice ->", pc.iceConnectionState); }
+    if (!pc && done && done()) clearInterval(t);
+    if (pc && (["connected","completed","failed","closed"].includes(pc.iceConnectionState)
+        || (done && done()))) clearInterval(t);
+  }, 1500);
+  return t;
+}
 
 const Duel = {
   role: null, peer: null, conns: new Map(), conn: null, roomId: null,
@@ -1056,7 +1070,9 @@ const Duel = {
     peer.on("open", () => { clearTimeout(this.connectTimer);
       this.ready = true; this.renderHostLobby(); });
     peer.on("connection", conn => {
-      conn.on("open", () => { this.conns.set(conn.peer, conn);
+      dlog("host got a connection from", conn.peer);
+      watchIce(conn, () => arena.hidden);
+      conn.on("open", () => { dlog("host data channel open →", conn.peer); this.conns.set(conn.peer, conn);
         conn.send({ t: "hello", challenger: this.challenger, gpu: this.gpu }); });
       conn.on("data", d => this.onGuest(conn, d));
       conn.on("close", () => this.dropGuest(conn.peer));
@@ -1066,6 +1082,7 @@ const Duel = {
       if (err && err.type === "unavailable-id" && (tries || 0) < 3){
         return this.host(gpu, (tries || 0) + 1);                 // id clash, retry
       }
+      dlog("host peer error:", err && err.type, err);
       clearTimeout(this.connectTimer);
       this.renderRetry("the room could not open (" + (err && err.type || "network") + "). try again.",
         () => this.host(this.gpu));
@@ -1203,18 +1220,21 @@ const Duel = {
         "and that peer-to-peer isn't blocked on your network, then try again.",
         () => this.join(this.roomId)); }, 15000);
     peer.on("open", () => {
+      dlog("guest peer open", peer.id, "→ connecting to", roomId);
       this.myId = peer.id;
       this.renderConnecting("connecting to the challenger…");
       const conn = peer.connect(roomId, { reliable: true });
       this.conn = conn;
-      conn.on("open", () => { this.ready = true; this.renderConnecting("waiting for the challenge…"); });
+      watchIce(conn, () => this.gotHello || arena.hidden);
+      conn.on("open", () => { dlog("guest data channel open"); this.ready = true;
+        this.renderConnecting("waiting for the challenge…"); });
       conn.on("data", d => this.onHost(d));
       conn.on("close", () => { if (!arena.hidden && !this.finished)
         this.renderError("the challenger left — the duel is off."); });
       conn.on("error", () => this.renderError("lost the connection to the challenger."));
     });
     peer.on("error", err => {
-      const t = err && err.type; clearTimeout(this.connectTimer);
+      const t = err && err.type; dlog("guest peer error:", t, err); clearTimeout(this.connectTimer);
       this.renderRetry(t === "peer-unavailable"
         ? "that room isn't open — the host may have closed the Fight window. ask them to reopen it, then try again."
         : "could not join the duel (" + (t || "network") + "). try again.",
