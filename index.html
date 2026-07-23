@@ -1165,7 +1165,7 @@ const Duel = {
     const players = new Map();
     ids.forEach((id, i) => { const [x, y] = sp[i] || [1, 1];
       players.set(id, { name: this.fighters.get(id), x, y, face: Math.floor(Math.random() * 4),
-                        alive: true, turn: 0, fwd: false, fire: false }); });
+                        alive: true, want: null, fire: false }); });
     this.match = { N, walls, players, bullets: [], over: false };
     this.playing = true; this.finished = false;
     this.broadcast({ t: "start", N, walls: walls.join(""),
@@ -1177,19 +1177,17 @@ const Duel = {
   applyInput(id, a){
     const p = this.match && this.match.players.get(id);
     if (!p || !p.alive) return;
-    if (a.turn != null) p.turn = a.turn;       // pending rotation (left/right/about-face)
-    if (a.forward) p.fwd = true;               // pending forward step
+    if (a.move != null){ p.want = a.move; p.face = a.move; }
     if (a.fire) p.fire = true;
   },
   tick(){
     const m = this.match; if (!m || m.over) return;
-    for (const [id, p] of m.players){                               // turn in place, then step forward
-      if (!p.alive){ p.turn = 0; p.fwd = false; continue; }
-      if (p.turn){ p.face = (p.face + p.turn + 4) % 4; p.turn = 0; }
-      if (p.fwd){ const [dx, dy] = DIRS[p.face], nx = p.x + dx, ny = p.y + dy;
+    for (const [id, p] of m.players){                               // movement (one cell/tick)
+      if (p.alive && p.want != null){
+        const [dx, dy] = DIRS[p.want], nx = p.x + dx, ny = p.y + dy;
         if (!this.solid(m.walls, m.N, nx, ny) && !this.taken(nx, ny, id)){ p.x = nx; p.y = ny; }
-        p.fwd = false;
       }
+      p.want = null;
     }
     for (const [id, p] of m.players)                                // fire (one live paintball each)
       if (p.alive && p.fire){ p.fire = false;
@@ -1287,10 +1285,10 @@ const Duel = {
     const self = this.view && this.view.players.find(p => p[0] === this.myId);
     if (!self || !self[4]) return;                              // only while alive
     if (this.role === "host"){ this.applyInput("host", action); return; }
-    if (!action.fire){                                         // dedupe held-key repeats
-      const sig = action.forward ? "fwd" : "turn" + action.turn, now = performance.now();
-      if (sig === this._lastSig && now - this._lastSigT < 60) return;
-      this._lastSig = sig; this._lastSigT = now;
+    if (action.move != null){                                  // dedupe held-key repeats
+      const now = performance.now();
+      if (action.move === this._lastMove && now - this._lastMoveT < 80) return;
+      this._lastMove = action.move; this._lastMoveT = now;
     }
     this.send({ t: "input", ...action });
   },
@@ -1298,10 +1296,8 @@ const Duel = {
     if (!this.playing || arena.hidden) return;
     const k = (e.key || "").toLowerCase();
     if (e.code === "Space" || k === " "){ e.preventDefault(); this.input({ fire: true }); return; }
-    if (k === "arrowup" || k === "w"){ e.preventDefault(); this.input({ forward: true }); }
-    else if (k === "arrowright" || k === "d"){ e.preventDefault(); this.input({ turn: 1 }); }   // right
-    else if (k === "arrowleft" || k === "a"){ e.preventDefault(); this.input({ turn: -1 }); }    // left
-    else if (k === "arrowdown" || k === "s"){ e.preventDefault(); this.input({ turn: 2 }); }     // about-face
+    const move = { arrowup: 0, w: 0, arrowright: 1, d: 1, arrowdown: 2, s: 2, arrowleft: 3, a: 3 };
+    if (k in move){ e.preventDefault(); this.input({ move: move[k] }); }
   },
 
   /* ---- rendering ------------------------------------------------------- */
@@ -1336,7 +1332,7 @@ const Duel = {
         <button class="ghost" id="copyurl">copy</button></div>
       <ul class="roster">${this.rosterList(this.myId)}</ul>
       <div class="note">${n < 2 ? "waiting for a challenger to join…"
-        : "↑ forward · ←/→ turn · ↓ about-face · space shoots — you only see the 5×5 you face."}</div>
+        : "move with WASD/arrows, shoot with space — you only see the 5×5 around you."}</div>
       <button class="go" id="startbtn" ${n < 2 ? "disabled" : ""}>${
         n < 2 ? "need a challenger" : "🔫 START THE MATCH"}</button>`);
     const name = document.getElementById("hostname");
@@ -1360,8 +1356,8 @@ const Duel = {
         <input type="text" id="myname" maxlength="24" placeholder="your username"
           value="${esc(this.savedName())}">
         <button class="go" id="acceptbtn">accept the challenge</button></div>
-      <div class="note">a top-down paintball duel: ↑ forward, ←/→ turn, ↓ about-face, space shoots.
-        you only see the 5×5 you're facing — hunt them down, last one standing wins.</div>`);
+      <div class="note">a top-down paintball duel: move with WASD/arrows, shoot with space.
+        you only see the 5×5 around you — hunt them down, last one standing wins.</div>`);
     const inp = document.getElementById("myname");
     const go = () => { const v = this.clean(inp.value); this.keepName(v);
       this.send({ t: "join", name: v }); this.renderGuestLobby(); };
@@ -1373,7 +1369,7 @@ const Duel = {
     this.frame(`
       <h3>⚔️ fighting for <span class="gpu">${esc(this.gpu)}</span></h3>
       <ul class="roster">${this.rosterList()}</ul>
-      <div class="note">↑ forward · ←/→ turn · ↓ about-face · space shoots.</div>
+      <div class="note">WASD/arrows to move, space to shoot — 5×5 view.</div>
       <div class="hold">waiting for ${esc(this.challenger)} to start…</div>`);
   },
   renderWindow(){
@@ -1415,7 +1411,7 @@ const Duel = {
       <div class="hud"><span><b>${esc(this.fighters.get(this.myId) || "you")}</b></span>
         <span>${alive} left</span></div>
       ${salive
-        ? `<div class="keys"><kbd>↑</kbd> forward · <kbd>←</kbd><kbd>→</kbd> turn · <kbd>↓</kbd> about-face · <kbd>space</kbd> shoot</div>`
+        ? `<div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to move · <kbd>space</kbd> to shoot</div>`
         : `<div class="tag">💥 tagged — you're out, ${alive} still fighting</div>`}`);
   },
   showResult(res){
