@@ -1006,6 +1006,13 @@ const arena = document.getElementById("arena");
 const arenaBody = document.getElementById("arenabody");
 const rid = () => Math.random().toString(36).slice(2, 8);
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];   // N, E, S, W as [dx, dy]
+// STUN for direct connections, plus a free public TURN relay so peers behind
+// stricter NATs (different networks/campus wifi) can still reach each other.
+const PEER_OPTS = { debug: 1, config: { iceServers: [
+  { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+  { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+  { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+] } };
 
 const Duel = {
   role: null, peer: null, conns: new Map(), conn: null, roomId: null,
@@ -1022,7 +1029,8 @@ const Duel = {
 
   reset(){
     if (this.peer){ try{ this.peer.destroy(); }catch(e){} }
-    clearInterval(this.matchTimer);
+    clearInterval(this.matchTimer); clearTimeout(this.connectTimer);
+    this.gotHello = false;
     this.role = this.peer = this.conn = this.roomId = null;
     this.match = null; this.matchTimer = null; this.view = null;
     this.playing = false; this.finished = false;
@@ -1041,9 +1049,12 @@ const Duel = {
     try{ await loadPeer(); }catch(e){ return this.renderError(e.message); }
     const roomId = "uclgpu-" + rid() + rid();
     this.roomId = roomId;
-    const peer = new Peer(roomId, { debug: 1 });
+    const peer = new Peer(roomId, PEER_OPTS);
     this.peer = peer;
-    peer.on("open", () => { this.ready = true; this.renderHostLobby(); });
+    this.connectTimer = setTimeout(() => { if (!this.ready)
+      this.renderRetry("couldn't open a room — the peer broker may be busy. give it another go."); }, 12000);
+    peer.on("open", () => { clearTimeout(this.connectTimer);
+      this.ready = true; this.renderHostLobby(); });
     peer.on("connection", conn => {
       conn.on("open", () => { this.conns.set(conn.peer, conn);
         conn.send({ t: "hello", challenger: this.challenger, gpu: this.gpu }); });
@@ -1055,7 +1066,9 @@ const Duel = {
       if (err && err.type === "unavailable-id" && (tries || 0) < 3){
         return this.host(gpu, (tries || 0) + 1);                 // id clash, retry
       }
-      this.renderError("the room could not open (" + (err.type || "network") + ").");
+      clearTimeout(this.connectTimer);
+      this.renderRetry("the room could not open (" + (err && err.type || "network") + "). try again.",
+        () => this.host(this.gpu));
     });
   },
   onGuest(conn, d){
@@ -1183,29 +1196,36 @@ const Duel = {
     this.role = "guest"; this.roomId = roomId;
     this.open(); this.renderConnecting("reaching the challenger…");
     try{ await loadPeer(); }catch(e){ return this.renderError(e.message); }
-    const peer = new Peer({ debug: 1 });
+    const peer = new Peer(PEER_OPTS);
     this.peer = peer;
+    this.connectTimer = setTimeout(() => { if (!this.gotHello)
+      this.renderRetry("couldn't reach the challenger. make sure they still have the Fight window open " +
+        "and that peer-to-peer isn't blocked on your network, then try again.",
+        () => this.join(this.roomId)); }, 15000);
     peer.on("open", () => {
       this.myId = peer.id;
+      this.renderConnecting("connecting to the challenger…");
       const conn = peer.connect(roomId, { reliable: true });
       this.conn = conn;
-      conn.on("open", () => { this.ready = true; });
+      conn.on("open", () => { this.ready = true; this.renderConnecting("waiting for the challenge…"); });
       conn.on("data", d => this.onHost(d));
       conn.on("close", () => { if (!arena.hidden && !this.finished)
         this.renderError("the challenger left — the duel is off."); });
       conn.on("error", () => this.renderError("lost the connection to the challenger."));
     });
     peer.on("error", err => {
-      const t = err && err.type;
-      this.renderError(t === "peer-unavailable"
-        ? "that room isn't open — the challenge may have expired."
-        : "could not join the duel (" + (t || "network") + ").");
+      const t = err && err.type; clearTimeout(this.connectTimer);
+      this.renderRetry(t === "peer-unavailable"
+        ? "that room isn't open — the host may have closed the Fight window. ask them to reopen it, then try again."
+        : "could not join the duel (" + (t || "network") + "). try again.",
+        () => this.join(this.roomId));
     });
   },
   send(msg){ if (this.conn){ try{ this.conn.send(msg); }catch(e){} } },
   onHost(d){
     if (!d || typeof d.t !== "string") return;
-    if (d.t === "hello"){ this.challenger = this.clean(d.challenger); this.gpu = d.gpu;
+    if (d.t === "hello"){ this.gotHello = true; clearTimeout(this.connectTimer);
+      this.challenger = this.clean(d.challenger); this.gpu = d.gpu;
       this.renderChallenge();
     } else if (d.t === "roster"){ this.fighters = new Map(d.fighters.map(f => [f.id, this.clean(f.name)]));
       const h = d.fighters.find(f => f.id === "host"); if (h) this.challenger = this.clean(h.name);
@@ -1248,9 +1268,15 @@ const Duel = {
     `<h3>⚔️ fight for it</h3><div class="sub2" style="color:var(--hot)">${esc(msg)}</div>
      <button class="ghost" id="bye">close</button>`);
     document.getElementById("bye").onclick = () => this.close(); },
+  renderRetry(msg, retry){ this.frame(
+    `<h3>⚔️ fight for it</h3><div class="sub2" style="color:var(--hot)">${esc(msg)}</div>
+     <div class="field"><button class="go" id="retry">try again</button>
+       <button class="ghost" id="bye">close</button></div>`);
+    document.getElementById("retry").onclick = retry || (() => this.close());
+    document.getElementById("bye").onclick = () => this.close(); },
 
-  rosterList(){
-    return [...this.fighters].map(([id, name]) =>
+  rosterList(exclude){
+    return [...this.fighters].filter(([id]) => id !== exclude).map(([id, name]) =>
       `<li>${esc(name)}${id === this.myId ? ' <span class="you">you</span>' : ""}</li>`).join("");
   },
   renderHostLobby(){
@@ -1264,7 +1290,7 @@ const Duel = {
       <div class="note">send this link to a challenger:</div>
       <div class="link"><input type="text" id="shareurl" readonly value="${esc(this.shareUrl())}">
         <button class="ghost" id="copyurl">copy</button></div>
-      <ul class="roster">${this.rosterList()}</ul>
+      <ul class="roster">${this.rosterList(this.myId)}</ul>
       <div class="note">${n < 2 ? "waiting for a challenger to join…"
         : "move with WASD/arrows, shoot with space — you only see the 5×5 around you."}</div>
       <button class="go" id="startbtn" ${n < 2 ? "disabled" : ""}>${
@@ -1276,7 +1302,7 @@ const Duel = {
       // refresh the roster line in place — re-rendering the whole lobby would
       // steal focus from the field being typed into
       const ul = document.querySelector("#arenabody .roster");
-      if (ul) ul.innerHTML = this.rosterList(); };
+      if (ul) ul.innerHTML = this.rosterList(this.myId); };
     document.getElementById("copyurl").onclick = e => this.copy(e.target);
     document.getElementById("startbtn").onclick = () => this.startMatch();
     if (!this.fighters.get("host")) name.focus();
