@@ -206,6 +206,24 @@
   @keyframes flash{0%,100%{opacity:1}50%{opacity:.35}}
   .arena .hold{animation:flash 1.1s ease-in-out infinite;color:var(--muted);font-size:22px;
     letter-spacing:4px}
+  /* 5x5 fog-of-war board */
+  .arena .board{display:grid;grid-template-columns:repeat(5,46px);grid-auto-rows:46px;gap:3px;
+    justify-content:center;margin:16px auto 6px;padding:9px;width:max-content;border-radius:12px;
+    background:#080b10;border:1px solid var(--line)}
+  .arena .cell{border-radius:6px;background:#141a24;display:flex;align-items:center;
+    justify-content:center;font-size:24px;line-height:1}
+  .arena .cell.wall{background:#2a3140}
+  .arena .cell.self{background:#1f6b42;color:#eafff3;box-shadow:0 0 0 2px #38c586 inset}
+  .arena .cell.self.dead{background:#5a2820;color:#ffd7cd;box-shadow:none}
+  .arena .cell.foe{background:#b23f2c;color:#fff}
+  .arena .cell.bullet{color:var(--gold);font-size:30px}
+  .arena .hud{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    width:262px;margin:8px auto 0;color:var(--dim);font-size:12px}
+  .arena .hud b{color:var(--green);font-weight:600}
+  .arena .keys{color:var(--muted);font-size:12px;margin-top:8px}
+  .arena .keys kbd{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;
+    padding:1px 6px;font:inherit;font-size:11px;color:var(--ink)}
+  .arena .tag{color:var(--hot);font-weight:700;margin-top:10px}
 </style>
 </head>
 <body>
@@ -987,11 +1005,12 @@ function loadPeer(){
 const arena = document.getElementById("arena");
 const arenaBody = document.getElementById("arenabody");
 const rid = () => Math.random().toString(36).slice(2, 8);
+const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];   // N, E, S, W as [dx, dy]
 
 const Duel = {
   role: null, peer: null, conns: new Map(), conn: null, roomId: null,
   gpu: "", challenger: "", myId: null, fighters: new Map(),
-  round: null, roundN: 0, armTimer: null, ready: false,
+  match: null, matchTimer: null, view: null, playing: false, finished: false, ready: false,
 
   // remembered display name, best-effort
   savedName(){ try{ return localStorage.getItem("duelname") || ""; }catch(e){ return ""; } },
@@ -1003,11 +1022,12 @@ const Duel = {
 
   reset(){
     if (this.peer){ try{ this.peer.destroy(); }catch(e){} }
-    clearTimeout(this.armTimer);
-    if (this.round) clearTimeout(this.round.timer);
-    this.role = this.peer = this.conn = this.roomId = this.round = null;
+    clearInterval(this.matchTimer);
+    this.role = this.peer = this.conn = this.roomId = null;
+    this.match = null; this.matchTimer = null; this.view = null;
+    this.playing = false; this.finished = false;
     this.conns = new Map(); this.fighters = new Map();
-    this.roundN = 0; this.ready = false;
+    this.ready = false;
   },
   close(){ this.reset(); arena.hidden = true; },
 
@@ -1043,54 +1063,119 @@ const Duel = {
     if (d.t === "join"){
       this.fighters.set(conn.peer, this.clean(d.name));
       this.broadcastRoster();
-      if (!this.round) this.renderHostLobby();
-    } else if (d.t === "shot" && this.round && d.round === this.round.n){
-      const r = this.round;
-      if (!r.responded.has(conn.peer)){ r.shots[conn.peer] = +d.dt; r.responded.add(conn.peer);
-        this.maybeResolve(false); }
-    } else if (d.t === "foul" && this.round && d.round === this.round.n){
-      this.round.responded.add(conn.peer); this.maybeResolve(false);
+      if (!this.playing) this.renderHostLobby();
+    } else if (d.t === "input"){
+      this.applyInput(conn.peer, d);
     }
   },
   dropGuest(id){
     this.fighters.delete(id); this.conns.delete(id);
     this.broadcastRoster();
-    if (this.round) this.maybeResolve(false); else if (this.role === "host") this.renderHostLobby();
+    if (this.match && this.match.players.has(id)) this.match.players.get(id).alive = false;
+    if (!this.playing && this.role === "host" && !this.finished) this.renderHostLobby();
   },
   broadcast(msg){ for (const c of this.conns.values()){ try{ c.send(msg); }catch(e){} } },
   broadcastRoster(){
     this.broadcast({ t: "roster", fighters: [...this.fighters].map(([id, name]) => ({ id, name })) });
   },
 
-  startRound(){
-    if (this.fighters.size < 2) return;
-    this.round = { n: ++this.roundN, phase: "armed", drawT: 0, done: false,
-                   shots: {}, responded: new Set(), timer: null };
-    this.broadcast({ t: "arm", round: this.round.n });
-    this.renderStage("armed");
-    clearTimeout(this.armTimer);
-    this.armTimer = setTimeout(() => this.fireDraw(), 1500 + Math.random() * 3500);
+  /* ---- paintball match (host is the authoritative server) -------------- */
+  solid(walls, N, x, y){ return x < 0 || y < 0 || x >= N || y >= N || walls[y * N + x] === 1; },
+  genMaze(N){                                     // recursive backtracker, then braided
+    const w = new Array(N * N).fill(1), ix = (x, y) => y * N + x;
+    const stack = [[1, 1]]; w[ix(1, 1)] = 0;
+    while (stack.length){
+      const [x, y] = stack[stack.length - 1];
+      const dirs = [[2, 0], [-2, 0], [0, 2], [0, -2]].sort(() => Math.random() - 0.5);
+      let carved = false;
+      for (const [dx, dy] of dirs){ const nx = x + dx, ny = y + dy;
+        if (nx > 0 && nx < N - 1 && ny > 0 && ny < N - 1 && w[ix(nx, ny)] === 1){
+          w[ix(x + dx / 2, y + dy / 2)] = 0; w[ix(nx, ny)] = 0; stack.push([nx, ny]); carved = true; break; } }
+      if (!carved) stack.pop();
+    }
+    for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++)     // open loops & sightlines
+      if (w[ix(x, y)] === 1 && Math.random() < 0.18) w[ix(x, y)] = 0;
+    return w;
   },
-  fireDraw(){
-    const r = this.round; if (!r || r.phase !== "armed") return;
-    r.phase = "draw"; r.drawT = performance.now();
-    this.broadcast({ t: "draw", round: r.n });
-    r.timer = setTimeout(() => this.maybeResolve(true), 6000);
-    this.renderStage("draw");
+  pickSpawns(w, N, count){
+    const open = [];
+    for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (w[y * N + x] === 0) open.push([x, y]);
+    open.sort(() => Math.random() - 0.5);
+    const far = Math.max(4, Math.floor(N / 2)), chosen = [];
+    for (const c of open){
+      if (chosen.every(o => Math.abs(o[0] - c[0]) + Math.abs(o[1] - c[1]) >= far)) chosen.push(c);
+      if (chosen.length >= count) break;
+    }
+    for (let i = 0; chosen.length < count && i < open.length; i++) chosen.push(open[i]);
+    return chosen;
   },
-  maybeResolve(force){
-    const r = this.round; if (!r || r.done) return;
+  startMatch(){
     const ids = [...this.fighters.keys()];
-    if (!force && !ids.every(id => r.responded.has(id))) return;
-    r.done = true; clearTimeout(r.timer);
-    let win = null;
-    for (const id of ids){ const dt = r.shots[id];
-      if (dt != null && (!win || dt < win.dt)) win = { id, dt }; }
-    const res = win ? { name: this.fighters.get(win.id), dt: Math.round(win.dt), id: win.id }
-                    : { name: null };
-    this.broadcast({ t: "winner", name: res.name, dt: res.dt, id: res.id, round: r.n });
-    this.showResult(res);
+    if (ids.length < 2) return;
+    const N = 15, walls = this.genMaze(N), sp = this.pickSpawns(walls, N, ids.length);
+    const players = new Map();
+    ids.forEach((id, i) => { const [x, y] = sp[i] || [1, 1];
+      players.set(id, { name: this.fighters.get(id), x, y, face: Math.floor(Math.random() * 4),
+                        alive: true, want: null, fire: false }); });
+    this.match = { N, walls, players, bullets: [], over: false };
+    this.playing = true; this.finished = false;
+    this.broadcast({ t: "start", N, walls: walls.join(""),
+      players: [...players].map(([id, p]) => [id, p.x, p.y, p.face, 1]) });
+    this.buildView(); this.renderWindow();
+    clearInterval(this.matchTimer);
+    this.matchTimer = setInterval(() => this.tick(), 140);
   },
+  applyInput(id, a){
+    const p = this.match && this.match.players.get(id);
+    if (!p || !p.alive) return;
+    if (a.move != null){ p.want = a.move; p.face = a.move; }
+    if (a.fire) p.fire = true;
+  },
+  tick(){
+    const m = this.match; if (!m || m.over) return;
+    for (const [id, p] of m.players){                               // movement (one cell/tick)
+      if (p.alive && p.want != null){
+        const [dx, dy] = DIRS[p.want], nx = p.x + dx, ny = p.y + dy;
+        if (!this.solid(m.walls, m.N, nx, ny) && !this.taken(nx, ny, id)){ p.x = nx; p.y = ny; }
+      }
+      p.want = null;
+    }
+    for (const [id, p] of m.players)                                // fire (one live paintball each)
+      if (p.alive && p.fire){ p.fire = false;
+        if (!m.bullets.some(b => b.owner === id)) m.bullets.push({ owner: id, x: p.x, y: p.y, dir: p.face }); }
+    const kept = [];                                                // paintballs (two cells/tick)
+    for (const b of m.bullets){ let gone = false;
+      for (let s = 0; s < 2 && !gone; s++){
+        const [dx, dy] = DIRS[b.dir], nx = b.x + dx, ny = b.y + dy;
+        if (this.solid(m.walls, m.N, nx, ny)){ gone = true; break; }
+        b.x = nx; b.y = ny;
+        for (const [id, p] of m.players)
+          if (p.alive && id !== b.owner && p.x === b.x && p.y === b.y){ p.alive = false; gone = true; break; }
+      }
+      if (!gone) kept.push(b);
+    }
+    m.bullets = kept;
+    this.buildView(); this.broadcastState(); this.renderWindow();
+    const alive = [...m.players].filter(([, p]) => p.alive);
+    if (alive.length <= 1){
+      m.over = true; this.playing = false; this.finished = true; clearInterval(this.matchTimer);
+      const win = alive.length === 1 ? { id: alive[0][0], name: alive[0][1].name } : { name: null };
+      this.broadcast({ t: "over", id: win.id, name: win.name });
+      this.showResult(win);
+    }
+  },
+  taken(x, y, selfId){
+    for (const [id, p] of this.match.players)
+      if (id !== selfId && p.alive && p.x === x && p.y === y) return true;
+    return false;
+  },
+  buildView(){
+    const m = this.match;
+    this.view = { N: m.N, walls: m.walls,
+      players: [...m.players].map(([id, p]) => [id, p.x, p.y, p.face, p.alive ? 1 : 0]),
+      bullets: m.bullets.map(b => [b.x, b.y, b.dir]) };
+  },
+  broadcastState(){ this.broadcast({ t: "state", players: this.view.players, bullets: this.view.bullets }); },
 
   /* ---- guest ----------------------------------------------------------- */
   async join(roomId){
@@ -1106,7 +1191,7 @@ const Duel = {
       this.conn = conn;
       conn.on("open", () => { this.ready = true; });
       conn.on("data", d => this.onHost(d));
-      conn.on("close", () => { if (!this.round || !this.round.done)
+      conn.on("close", () => { if (!arena.hidden && !this.finished)
         this.renderError("the challenger left — the duel is off."); });
       conn.on("error", () => this.renderError("lost the connection to the challenger."));
     });
@@ -1124,30 +1209,35 @@ const Duel = {
       this.renderChallenge();
     } else if (d.t === "roster"){ this.fighters = new Map(d.fighters.map(f => [f.id, this.clean(f.name)]));
       const h = d.fighters.find(f => f.id === "host"); if (h) this.challenger = this.clean(h.name);
-      if (!this.round) this.renderGuestLobby();
-    } else if (d.t === "arm"){ this.round = { n: d.round, phase: "armed", drawT: 0, self: null };
-      this.renderStage("armed");
-    } else if (d.t === "draw" && this.round){ this.round.phase = "draw";
-      this.round.drawT = performance.now(); this.renderStage("draw");
-    } else if (d.t === "winner"){ this.showResult({ name: d.name, dt: d.dt, id: d.id });
+      if (!this.playing) this.renderGuestLobby();
+    } else if (d.t === "start"){ this.playing = true; this.finished = false;
+      this.view = { N: d.N, walls: d.walls.split("").map(Number), players: d.players, bullets: [] };
+      this.renderWindow();
+    } else if (d.t === "state" && this.view){ this.view.players = d.players;
+      this.view.bullets = d.bullets; this.renderWindow();
+    } else if (d.t === "over"){ this.playing = false; this.finished = true;
+      this.showResult({ id: d.id, name: d.name });
     }
   },
 
   /* ---- shared play ----------------------------------------------------- */
-  onStageClick(){
-    const r = this.round; if (!r || r.done) return;
-    const meResponded = this.role === "host" ? r.responded && r.responded.has("host") : r.self;
-    if (meResponded) return;
-    if (r.phase === "armed"){                                   // flinch → out
-      if (this.role === "host"){ r.responded.add("host"); this.maybeResolve(false); }
-      else { r.self = "foul"; this.send({ t: "foul", round: r.n }); }
-      this.stageNote("❌ too soon! you flinched — out this round.", true);
-    } else if (r.phase === "draw"){
-      const dt = performance.now() - r.drawT;
-      if (this.role === "host"){ r.shots["host"] = dt; r.responded.add("host"); this.maybeResolve(false); }
-      else { r.self = "shot"; this.send({ t: "shot", dt, round: r.n }); }
-      this.stageNote("🔫 you drew in " + Math.round(dt) + "ms — waiting for the others…");
+  input(action){
+    const self = this.view && this.view.players.find(p => p[0] === this.myId);
+    if (!self || !self[4]) return;                              // only while alive
+    if (this.role === "host"){ this.applyInput("host", action); return; }
+    if (action.move != null){                                  // dedupe held-key repeats
+      const now = performance.now();
+      if (action.move === this._lastMove && now - this._lastMoveT < 80) return;
+      this._lastMove = action.move; this._lastMoveT = now;
     }
+    this.send({ t: "input", ...action });
+  },
+  onKey(e){
+    if (!this.playing || arena.hidden) return;
+    const k = (e.key || "").toLowerCase();
+    if (e.code === "Space" || k === " "){ e.preventDefault(); this.input({ fire: true }); return; }
+    const move = { arrowup: 0, w: 0, arrowright: 1, d: 1, arrowdown: 2, s: 2, arrowleft: 3, a: 3 };
+    if (k in move){ e.preventDefault(); this.input({ move: move[k] }); }
   },
 
   /* ---- rendering ------------------------------------------------------- */
@@ -1167,7 +1257,8 @@ const Duel = {
     const n = this.fighters.size;
     this.frame(`
       <h3>⚔️ Fight for <span class="gpu">${esc(this.gpu)}</span></h3>
-      <div class="sub2">quickest draw wins sole access — a joke, nothing touches the cluster.</div>
+      <div class="sub2">a top-down paintball duel — last one standing takes the card.
+        a joke, nothing touches the cluster.</div>
       <div class="field"><input type="text" id="hostname" maxlength="24" placeholder="your username"
         value="${esc(this.fighters.get("host"))}" aria-label="your username"></div>
       <div class="note">send this link to a challenger:</div>
@@ -1175,9 +1266,9 @@ const Duel = {
         <button class="ghost" id="copyurl">copy</button></div>
       <ul class="roster">${this.rosterList()}</ul>
       <div class="note">${n < 2 ? "waiting for a challenger to join…"
-        : "everyone in? start when ready."}</div>
+        : "move with WASD/arrows, shoot with space — you only see the 5×5 around you."}</div>
       <button class="go" id="startbtn" ${n < 2 ? "disabled" : ""}>${
-        n < 2 ? "need a challenger" : "🔫 START THE DRAW"}</button>`);
+        n < 2 ? "need a challenger" : "🔫 START THE MATCH"}</button>`);
     const name = document.getElementById("hostname");
     name.oninput = () => { const v = name.value.trim().slice(0, 24);
       this.fighters.set("host", v); this.challenger = v;
@@ -1187,7 +1278,7 @@ const Duel = {
       const ul = document.querySelector("#arenabody .roster");
       if (ul) ul.innerHTML = this.rosterList(); };
     document.getElementById("copyurl").onclick = e => this.copy(e.target);
-    document.getElementById("startbtn").onclick = () => this.startRound();
+    document.getElementById("startbtn").onclick = () => this.startMatch();
     if (!this.fighters.get("host")) name.focus();
   },
   renderChallenge(){
@@ -1199,7 +1290,8 @@ const Duel = {
         <input type="text" id="myname" maxlength="24" placeholder="your username"
           value="${esc(this.savedName())}">
         <button class="go" id="acceptbtn">accept the challenge</button></div>
-      <div class="note">a quickest-draw duel: wait for green, then click. flinch early and you're out.</div>`);
+      <div class="note">a top-down paintball duel: move with WASD/arrows, shoot with space.
+        you only see the 5×5 around you — hunt them down, last one standing wins.</div>`);
     const inp = document.getElementById("myname");
     const go = () => { const v = this.clean(inp.value); this.keepName(v);
       this.send({ t: "join", name: v }); this.renderGuestLobby(); };
@@ -1211,22 +1303,36 @@ const Duel = {
     this.frame(`
       <h3>⚔️ fighting for <span class="gpu">${esc(this.gpu)}</span></h3>
       <ul class="roster">${this.rosterList()}</ul>
+      <div class="note">WASD/arrows to move, space to shoot — 5×5 view.</div>
       <div class="hold">waiting for ${esc(this.challenger)} to start…</div>`);
   },
-  renderStage(phase){
-    const inner = phase === "draw"
-      ? `<div class="huge">DRAW!</div>`
-      : `<div class="hold">HOLD…</div><div class="sub2">click the instant it turns green</div>`;
+  renderWindow(){
+    const v = this.view; if (!v) return;
+    const self = v.players.find(p => p[0] === this.myId);
+    const alive = v.players.filter(p => p[4]).length;
+    if (!self){                                                 // joined mid-match → spectate
+      this.frame(`<h3>⚔️ <span class="gpu">${esc(this.gpu)}</span></h3>
+        <div class="hold">spectating…</div><div class="note">${alive} still fighting</div>`);
+      return;
+    }
+    const [, sx, sy, sface, salive] = self, arrows = ["▲", "▶", "▼", "◀"];
+    let cells = "";
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++){
+      const x = sx + dx, y = sy + dy; let cls = "cell", ch = "";
+      if (this.solid(v.walls, v.N, x, y)) cls += " wall";
+      else if (dx === 0 && dy === 0){ cls += salive ? " self" : " self dead"; ch = salive ? arrows[sface] : "✕"; }
+      else if (v.players.some(p => p[4] && p[0] !== self[0] && p[1] === x && p[2] === y)){ cls += " foe"; ch = "●"; }
+      else if (v.bullets.some(b => b[0] === x && b[1] === y)) { cls += " bullet"; ch = "•"; }
+      cells += `<div class="${cls}">${ch}</div>`;
+    }
     this.frame(`
-      <h3>⚔️ dueling for <span class="gpu">${esc(this.gpu)}</span></h3>
-      <div class="stage ${phase}" id="stage">${inner}</div>
-      <div class="note" id="stagenote"></div>`);
-    document.getElementById("stage").onclick = () => this.onStageClick();
-  },
-  stageNote(msg, foul){
-    const s = document.getElementById("stagenote"); if (s) s.textContent = msg;
-    const st = document.getElementById("stage");
-    if (foul && st){ st.classList.remove("draw"); st.classList.add("foul"); }
+      <h3>⚔️ <span class="gpu">${esc(this.gpu)}</span></h3>
+      <div class="board">${cells}</div>
+      <div class="hud"><span><b>${esc(this.fighters.get(this.myId) || "you")}</b></span>
+        <span>${alive} left</span></div>
+      ${salive
+        ? `<div class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to move · <kbd>space</kbd> to shoot</div>`
+        : `<div class="tag">💥 tagged — you're out, ${alive} still fighting</div>`}`);
   },
   showResult(res){
     const mine = res.name && res.id === this.myId;
@@ -1234,16 +1340,15 @@ const Duel = {
       <h3>⚔️ <span class="gpu">${esc(this.gpu)}</span></h3>
       ${res.name
         ? `<div class="win">🏆 ${esc(res.name)} wins${mine ? " — that's you!" : ""}</div>
-           <div class="big" style="font-size:20px">reaction ${res.dt}ms</div>
-           <div class="sub2">${esc(res.name)} now holds sole, undisputed, entirely imaginary
-             access to ${esc(this.gpu)}.</div>`
-        : `<div class="win">nobody drew</div>
-           <div class="sub2">everyone flinched. the GPU keeps itself.</div>`}
+           <div class="sub2">${esc(res.name)} is the last one standing and now holds sole,
+             undisputed, entirely imaginary access to ${esc(this.gpu)}.</div>`
+        : `<div class="win">mutual splatter</div>
+           <div class="sub2">everyone got tagged at once. the GPU keeps itself.</div>`}
       ${this.role === "host"
         ? `<button class="go" id="rematch">⚔️ rematch</button>`
         : `<div class="note">waiting for a rematch…</div>`}`);
     const rm = document.getElementById("rematch");
-    if (rm) rm.onclick = () => this.startRound();
+    if (rm) rm.onclick = () => this.startMatch();
   },
   copy(btn){
     const inp = document.getElementById("shareurl");
@@ -1255,7 +1360,10 @@ const Duel = {
 };
 document.getElementById("arenaclose").onclick = () => Duel.close();
 arena.onclick = e => { if (e.target.id === "arena") Duel.close(); };
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !arena.hidden) Duel.close(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !arena.hidden){ Duel.close(); return; }
+  Duel.onKey(e);
+});
 
 const saved = recall();
 tick().then(() => { if (saved && board && board.vault) unlock(saved); });
