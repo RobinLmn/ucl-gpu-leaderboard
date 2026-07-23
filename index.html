@@ -1015,18 +1015,30 @@ const PEER_OPTS = { debug: 1, config: { iceServers: [
   { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
 ] } };
 const dlog = (...a) => { try{ console.log("[duel]", ...a); }catch(e){} };
-// log the underlying WebRTC ICE state so a stuck connection is diagnosable
-function watchIce(conn, done){
+// log the underlying WebRTC ICE state so a stuck connection is diagnosable,
+// and surface a real failure fast instead of waiting out the timeout
+function watchIce(conn, done, onFail){
+  let wired = false, bad = null, fired = false;
   const t = setInterval(() => {
     const pc = conn && conn.peerConnection;
-    if (pc){ dlog("ice:", pc.iceConnectionState, "| gathering:", pc.iceGatheringState);
-      pc.oniceconnectionstatechange = () => dlog("ice ->", pc.iceConnectionState); }
-    if (!pc && done && done()) clearInterval(t);
-    if (pc && (["connected","completed","failed","closed"].includes(pc.iceConnectionState)
-        || (done && done()))) clearInterval(t);
+    if (pc && !wired){ wired = true;
+      pc.oniceconnectionstatechange = () => {
+        const s = pc.iceConnectionState; dlog("ice ->", s);
+        if (s === "connected" || s === "completed") bad = null;
+        else if (s === "failed" && !fired){ fired = true; onFail && onFail(); }
+        else if (s === "disconnected") bad = bad || Date.now();
+      };
+    }
+    if (pc) dlog("ice:", pc.iceConnectionState, "| gathering:", pc.iceGatheringState);
+    if (bad && Date.now() - bad > 7000 && !fired){ fired = true; onFail && onFail(); }  // stuck disconnected
+    if ((done && done()) || (pc && ["connected","completed","closed"].includes(pc.iceConnectionState)))
+      clearInterval(t);
   }, 1500);
   return t;
 }
+const P2P_HINT = "couldn't establish a direct connection. on one computer, two different browsers often " +
+  "can't reach each other — try opening the link in a second window of the SAME browser " +
+  "(e.g. Chrome + an Incognito window). across different devices or networks, a TURN relay is needed.";
 
 const Duel = {
   role: null, peer: null, conns: new Map(), conn: null, roomId: null,
@@ -1219,17 +1231,17 @@ const Duel = {
     try{ await loadPeer(); }catch(e){ return this.renderError(e.message); }
     const peer = new Peer(PEER_OPTS);
     this.peer = peer;
+    const fail = () => { if (this.gotHello || arena.hidden) return;
+      clearTimeout(this.connectTimer); this.renderRetry(P2P_HINT, () => this.join(this.roomId)); };
     this.connectTimer = setTimeout(() => { if (!this.gotHello)
-      this.renderRetry("couldn't reach the challenger. make sure they still have the Fight window open " +
-        "and that peer-to-peer isn't blocked on your network, then try again.",
-        () => this.join(this.roomId)); }, 15000);
+      this.renderRetry(P2P_HINT, () => this.join(this.roomId)); }, 15000);
     peer.on("open", () => {
       dlog("guest peer open", peer.id, "→ connecting to", roomId);
       this.myId = peer.id;
       this.renderConnecting("connecting to the challenger…");
       const conn = peer.connect(roomId, { reliable: true });
       this.conn = conn;
-      watchIce(conn, () => this.gotHello || arena.hidden);
+      watchIce(conn, () => this.gotHello || arena.hidden, fail);
       conn.on("open", () => { dlog("guest data channel open"); this.ready = true;
         this.renderConnecting("waiting for the challenge…"); });
       conn.on("data", d => this.onHost(d));
