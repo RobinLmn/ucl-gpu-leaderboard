@@ -1069,6 +1069,10 @@ const Duel = {
       this.renderRetry("couldn't open a room — the peer broker may be busy. give it another go."); }, 12000);
     peer.on("open", () => { clearTimeout(this.connectTimer);
       this.ready = true; this.renderHostLobby(); });
+    // the broker often drops the host's socket while it sits idle in the lobby;
+    // without this the room silently stops accepting joins
+    peer.on("disconnected", () => { if (peer.destroyed) return;
+      dlog("host lost the broker → reconnecting"); try{ peer.reconnect(); }catch(e){} });
     peer.on("connection", conn => {
       dlog("host got a connection from", conn.peer);
       watchIce(conn, () => arena.hidden);
@@ -1233,6 +1237,8 @@ const Duel = {
         this.renderError("the challenger left — the duel is off."); });
       conn.on("error", () => this.renderError("lost the connection to the challenger."));
     });
+    peer.on("disconnected", () => { if (peer.destroyed) return;
+      dlog("guest lost the broker → reconnecting"); try{ peer.reconnect(); }catch(e){} });
     peer.on("error", err => {
       const t = err && err.type; dlog("guest peer error:", t, err); clearTimeout(this.connectTimer);
       this.renderRetry(t === "peer-unavailable"
