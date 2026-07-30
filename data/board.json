@@ -1,5 +1,5 @@
 {
- "generated": 1785452662,
+ "generated": 1785452779,
  "season": {
   "n": 2,
   "start": 1785341970,
@@ -67,11 +67,7 @@
    },
    {
     "user": "UnhingedYak",
-    "claims": 2
-   },
-   {
-    "user": "TurboPhantom",
-    "claims": 1
+    "claims": 3
    },
    {
     "user": "SpectralBadger",
@@ -79,6 +75,10 @@
    },
    {
     "user": "RadiantMoth2",
+    "claims": 1
+   },
+   {
+    "user": "RadiantMoth",
     "claims": 1
    }
   ],
@@ -2281,20 +2281,20 @@
     "mem": 0.1,
     "busy": 0.0,
     "procs": 0.0,
-    "temp": 33.0
+    "temp": 33.5
    },
    "rtx4070": {
     "util": 0.0,
     "mem": 0.3,
     "busy": 0.0,
     "procs": 0.0,
-    "temp": 33.3
+    "temp": 33.5
    }
   }
  ],
  "season_days": 3,
- "window_hours": 30.3,
- "samples": 909,
+ "window_hours": 30.34,
+ "samples": 910,
  "leaderboard": [
   {
    "user": "TurboPhantom",
@@ -2598,11 +2598,53 @@
      "driver": "590.44.01",
      "util_mem": "2 %",
      "temp": "33",
-     "power": "15.38 W",
+     "power": "15.46 W",
      "power_limit": "450.00 W",
      "fan": "0 %",
      "clock_sm": "210 MHz",
      "clock_max": "2130 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": []
+   },
+   {
+    "host": "gressingham-l",
+    "gpu": "RTX 3090 Ti",
+    "mem": 84,
+    "mem_total": 24564,
+    "util": 0,
+    "users": [],
+    "smi": {
+     "driver": "590.44.01",
+     "util_mem": "3 %",
+     "temp": "35",
+     "power": "13.07 W",
+     "power_limit": "450.00 W",
+     "fan": "0 %",
+     "clock_sm": "210 MHz",
+     "clock_max": "2130 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": []
+   },
+   {
+    "host": "barbel-l",
+    "gpu": "RTX 4070 Ti S",
+    "mem": 100,
+    "mem_total": 16376,
+    "util": 0,
+    "users": [],
+    "smi": {
+     "driver": "590.44.01",
+     "util_mem": "0 %",
+     "temp": "33",
+     "power": "1.86 W",
+     "power_limit": "285.00 W",
+     "fan": "0 %",
+     "clock_sm": "210 MHz",
+     "clock_max": "3120 MHz",
      "persistence": "Enabled",
      "compute_mode": "Default"
     },
@@ -2617,9 +2659,9 @@
     "users": [],
     "smi": {
      "driver": "590.44.01",
-     "util_mem": "0 %",
-     "temp": "33",
-     "power": "2.06 W",
+     "util_mem": "6 %",
+     "temp": "34",
+     "power": "2.68 W",
      "power_limit": "285.00 W",
      "fan": "0 %",
      "clock_sm": "210 MHz",
@@ -2638,9 +2680,9 @@
     "users": [],
     "smi": {
      "driver": "590.44.01",
-     "util_mem": "0 %",
-     "temp": "32",
-     "power": "6.53 W",
+     "util_mem": "6 %",
+     "temp": "33",
+     "power": "8.04 W",
      "power_limit": "285.00 W",
      "fan": "0 %",
      "clock_sm": "210 MHz",
@@ -2661,7 +2703,7 @@
      "driver": "590.44.01",
      "util_mem": "0 %",
      "temp": "35",
-     "power": "2.94 W",
+     "power": "3.46 W",
      "power_limit": "285.00 W",
      "fan": "0 %",
      "clock_sm": "210 MHz",
@@ -2683,7 +2725,6 @@
    "crested-l",
    "eider-l",
    "goosander-l",
-   "gressingham-l",
    "harlequin-l",
    "mallard-l",
    "mandarin-l",
@@ -2697,7 +2738,6 @@
    "smew-l",
    "wigeon-l",
    "albacore-l",
-   "barbel-l",
    "chub-l",
    "cripps-l",
    "dory-l",
@@ -2779,13 +2819,13 @@
   {
    "host": "barbel-l",
    "gpu": "RTX 4070 Ti S",
-   "busy_pct": 94.1,
+   "busy_pct": 94.0,
    "hours": 24.3
   },
   {
    "host": "gadwall-l",
    "gpu": "RTX 3090 Ti",
-   "busy_pct": 93.4,
+   "busy_pct": 93.2,
    "hours": 24.8
   },
   {
@@ -2905,8 +2945,8 @@
   {
    "host": "lamprey-l",
    "gpu": "RTX 4070 Ti S",
-   "busy_pct": 37.5,
-   "hours": 25.3
+   "busy_pct": 37.4,
+   "hours": 25.4
   },
   {
    "host": "plaice-l",
@@ -3044,7 +3084,7 @@
    "host": "whitebait-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 0.0,
-   "hours": 25.2
+   "hours": 25.3
   }
  ],
  "peak": {
