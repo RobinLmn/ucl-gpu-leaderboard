@@ -353,7 +353,7 @@ function ago(ts){
    whatever the reader types here. Nothing is sent anywhere: the page derives
    the key locally and either the payload opens or it does not. */
 let SECRETS = null;                 // {users, procs} once unlocked
-let passphrase = null;              // kept in memory; storage is only for reloads
+let passphrase = null;              // kept in memory; localStorage persists it across browser restarts
 // Stretching the passphrase costs a second, and the salt is stable between
 // cycles, so the derived key is kept for as long as both stay the same.
 let derived = {salt: null, pass: null, bits: null};
@@ -428,9 +428,9 @@ function keyUI(){
 const tidy = pass => String(pass ?? "")
   .replace(/[‘’‛]/g, "'").replace(/[“”]/g, '"').trim();
 
-const remember = pass => { try { sessionStorage.setItem("ucl-key", pass); } catch (e) {} };
-const forget = () => { try { sessionStorage.removeItem("ucl-key"); } catch (e) {} };
-const recall = () => { try { return sessionStorage.getItem("ucl-key"); } catch (e) { return null; } };
+const remember = pass => { try { localStorage.setItem("ucl-key", pass); } catch (e) {} };
+const forget = () => { try { localStorage.removeItem("ucl-key"); } catch (e) {} };
+const recall = () => { try { return localStorage.getItem("ucl-key"); } catch (e) { return null; } };
 
 async function unlock(input){
   const pass = tidy(input);
@@ -448,7 +448,7 @@ async function unlock(input){
   if (!opened){ note("that key does not open it", true); return false; }
   SECRETS = opened;
   passphrase = pass;
-  remember(pass);            // survives a reload; a blocked store is not an error
+  remember(pass);            // persists across browser restarts; a blocked store is not an error
   note("");
   document.getElementById("keyform").hidden = true;
   if (board) show(board);

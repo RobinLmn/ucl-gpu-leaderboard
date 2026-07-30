@@ -21,7 +21,7 @@ UNLOCK_KEY = os.environ.get("UCL_UNLOCK_KEY", "")
 
 LAB105 = ["aylesbury-l", "barnacle-l", "brent-l", "bufflehead-l", "cackling-l", "canada-l",
           "crested-l", "eider-l", "gadwall-l", "goosander-l", "gressingham-l", "harlequin-l",
-          "mallard-l", "mandarin-l", "pintail-l", "pocher-l", "ruddy-l", "scaup-l",
+          "mallard-l", "mandarin-l", "pintail-l", "pochard-l", "ruddy-l", "scaup-l",
           "scoter-l", "shelduck-l", "shoveler-l", "smew-l", "wigeon-l"]
 LAB121 = ["albacore-l", "barbel-l", "chub-l", "cripps-l", "dory-l", "elver-l", "flounder-l",
           "goldeye-l", "hake-l", "inanga-l", "javelin-l", "koi-l", "lamprey-l", "mackerel-l",
