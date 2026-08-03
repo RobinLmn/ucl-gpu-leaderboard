@@ -1,5 +1,5 @@
 {
- "generated": 1785798037,
+ "generated": 1785798142,
  "season": {
   "n": 2,
   "start": 1785341970,
@@ -62,16 +62,16 @@
   ],
   "reboot_rush": [
    {
-    "user": "GreedyGremlin2",
-    "claims": 58
+    "user": "UnhingedYak",
+    "claims": 63
    },
    {
-    "user": "UnhingedYak",
-    "claims": 41
+    "user": "GreedyGremlin2",
+    "claims": 32
    },
    {
     "user": "SpectralWarlock",
-    "claims": 16
+    "claims": 18
    },
    {
     "user": "TurboPhantom",
@@ -8558,12 +8558,26 @@
    }
   },
   {
-   "t": 1785798000
+   "t": 1785798000,
+   "rtx3090": {
+    "util": 0.0,
+    "mem": 0.0,
+    "busy": 0.0,
+    "procs": 0.0,
+    "temp": 44.0
+   },
+   "rtx4070": {
+    "util": 0.0,
+    "mem": 0.2,
+    "busy": 0.0,
+    "procs": 0.0,
+    "temp": 32.5
+   }
   }
  ],
  "season_days": 7,
- "window_hours": 126.24,
- "samples": 3695,
+ "window_hours": 126.27,
+ "samples": 3696,
  "leaderboard": [
   {
    "user": "TurboPhantom",
@@ -8975,7 +8989,71 @@
   }
  ],
  "live": {
-  "free": [],
+  "free": [
+   {
+    "host": "wigeon-l",
+    "gpu": "RTX 3090 Ti",
+    "mem": 30,
+    "mem_total": 24564,
+    "util": 0,
+    "users": [],
+    "smi": {
+     "driver": "590.44.01",
+     "util_mem": "0 %",
+     "temp": "44",
+     "power": "14.36 W",
+     "power_limit": "450.00 W",
+     "fan": "0 %",
+     "clock_sm": "210 MHz",
+     "clock_max": "2100 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": []
+   },
+   {
+    "host": "elver-l",
+    "gpu": "RTX 4070 Ti S",
+    "mem": 100,
+    "mem_total": 16376,
+    "util": 0,
+    "users": [],
+    "smi": {
+     "driver": "590.44.01",
+     "util_mem": "0 %",
+     "temp": "32",
+     "power": "31.62 W",
+     "power_limit": "285.00 W",
+     "fan": "0 %",
+     "clock_sm": "2640 MHz",
+     "clock_max": "3120 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": []
+   },
+   {
+    "host": "javelin-l",
+    "gpu": "RTX 4070 Ti S",
+    "mem": 100,
+    "mem_total": 16376,
+    "util": 0,
+    "users": [],
+    "smi": {
+     "driver": "590.44.01",
+     "util_mem": "0 %",
+     "temp": "33",
+     "power": "7.10 W",
+     "power_limit": "285.00 W",
+     "fan": "0 %",
+     "clock_sm": "210 MHz",
+     "clock_max": "3120 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": []
+   }
+  ],
   "busy": [],
   "unreachable": [
    "aylesbury-l",
@@ -9000,18 +9078,15 @@
    "shelduck-l",
    "shoveler-l",
    "smew-l",
-   "wigeon-l",
    "albacore-l",
    "barbel-l",
    "chub-l",
    "cripps-l",
    "dory-l",
-   "elver-l",
    "flounder-l",
    "goldeye-l",
    "hake-l",
    "inanga-l",
-   "javelin-l",
    "koi-l",
    "lamprey-l",
    "mackerel-l",
@@ -9196,7 +9271,7 @@
    "host": "javelin-l",
    "gpu": "RTX 4070 Ti S",
    "busy_pct": 76.3,
-   "hours": 97.5
+   "hours": 97.6
   },
   {
    "host": "nase-l",
