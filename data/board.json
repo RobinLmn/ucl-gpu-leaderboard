@@ -1,5 +1,5 @@
 {
- "generated": 1785787119,
+ "generated": 1785787219,
  "season": {
   "n": 2,
   "start": 1785341970,
@@ -67,7 +67,7 @@
    },
    {
     "user": "UnhingedYak",
-    "claims": 40
+    "claims": 39
    },
    {
     "user": "SpectralWarlock",
@@ -79,7 +79,7 @@
    },
    {
     "user": "SpectralWizard",
-    "claims": 8
+    "claims": 9
    }
   ],
   "squatters": [
@@ -94,11 +94,6 @@
     "cards": 0
    },
    {
-    "user": "SpectralGremlin",
-    "util": 0.0,
-    "cards": 0
-   },
-   {
     "user": "RogueKraken2",
     "util": 0.1,
     "cards": 0
@@ -106,6 +101,11 @@
    {
     "user": "SilentWizard2",
     "util": 0.2,
+    "cards": 0
+   },
+   {
+    "user": "CaffeinatedKraken",
+    "util": 0.4,
     "cards": 0
    }
   ],
@@ -236,6 +236,29 @@
    "now_users": []
   },
   {
+   "host": "goldeye-l",
+   "gpu": "RTX 4070 Ti S",
+   "peak": 3,
+   "peak_users": [
+    "RadiantBadger",
+    "SpectralWizard",
+    "RadiantMoth"
+   ],
+   "now": 2,
+   "now_users": [
+    {
+     "user": "SleeplessGoblin2",
+     "since": 1785787219,
+     "crasher": false
+    },
+    {
+     "user": "SpectralGremlin",
+     "since": 1785787219,
+     "crasher": false
+    }
+   ]
+  },
+  {
    "host": "aylesbury-l",
    "gpu": "RTX 3090 Ti",
    "peak": 3,
@@ -279,18 +302,6 @@
     "SpectralWarlock",
     "TurboPhantom",
     "UnhingedYak"
-   ],
-   "now": 0,
-   "now_users": []
-  },
-  {
-   "host": "goldeye-l",
-   "gpu": "RTX 4070 Ti S",
-   "peak": 3,
-   "peak_users": [
-    "RadiantBadger",
-    "SpectralWizard",
-    "RadiantMoth"
    ],
    "now": 0,
    "now_users": []
@@ -8429,11 +8440,21 @@
   },
   {
    "t": 1785786300
+  },
+  {
+   "t": 1785787200,
+   "rtx4070": {
+    "util": 87.0,
+    "mem": 14.9,
+    "busy": 1.0,
+    "procs": 2.0,
+    "temp": 44.0
+   }
   }
  ],
  "season_days": 6,
- "window_hours": 123.21,
- "samples": 3604,
+ "window_hours": 123.24,
+ "samples": 3605,
  "leaderboard": [
   {
    "user": "TurboPhantom",
@@ -8709,11 +8730,13 @@
   },
   {
    "user": "SpectralGremlin",
-   "hours": 2.87,
-   "live": 0,
+   "hours": 2.9,
+   "live": 1,
    "night": 0.0,
    "morning": 0.0,
-   "days": 1
+   "days": 1,
+   "since": 1785787219,
+   "floor": false
   },
   {
    "user": "SilentWizard2",
@@ -8834,11 +8857,65 @@
    "night": 0.0,
    "morning": 0.0,
    "days": 1
+  },
+  {
+   "user": "SleeplessGoblin2",
+   "hours": 0.03,
+   "live": 1,
+   "night": 0.0,
+   "morning": 0.0,
+   "days": 1,
+   "since": 1785787219,
+   "floor": false
   }
  ],
  "live": {
   "free": [],
-  "busy": [],
+  "busy": [
+   {
+    "host": "goldeye-l",
+    "gpu": "RTX 4070 Ti S",
+    "mem": 15256,
+    "mem_total": 16376,
+    "util": 87,
+    "users": [
+     "SleeplessGoblin2",
+     "SpectralGremlin"
+    ],
+    "smi": {
+     "driver": "590.44.01",
+     "util_mem": "58 %",
+     "temp": "44",
+     "power": "158.20 W",
+     "power_limit": "285.00 W",
+     "fan": "0 %",
+     "clock_sm": "2700 MHz",
+     "clock_max": "3120 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": [
+     {
+      "pid": 912616,
+      "user": "SpectralGremlin",
+      "mem": 9846,
+      "etimes": 41770,
+      "cpu": "62.1",
+      "rss": 317072,
+      "name": "python"
+     },
+     {
+      "pid": 935774,
+      "user": "SleeplessGoblin2",
+      "mem": 5235,
+      "etimes": 32000,
+      "cpu": "67.1",
+      "rss": 5464820,
+      "name": "python3"
+     }
+    ]
+   }
+  ],
   "unreachable": [
    "aylesbury-l",
    "barnacle-l",
@@ -8870,7 +8947,6 @@
    "dory-l",
    "elver-l",
    "flounder-l",
-   "goldeye-l",
    "hake-l",
    "inanga-l",
    "javelin-l",
