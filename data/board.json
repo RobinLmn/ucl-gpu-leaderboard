@@ -1,5 +1,5 @@
 {
- "generated": 1786053135,
+ "generated": 1786053254,
  "season": {
   "n": 3,
   "start": 1785946770,
@@ -71,7 +71,7 @@
   "reboot_rush": [
    {
     "user": "SpectralWarlock",
-    "claims": 10
+    "claims": 11
    },
    {
     "user": "TurboPhantom",
@@ -242,6 +242,23 @@
    "now_users": []
   },
   {
+   "host": "shoveler-l",
+   "gpu": "RTX 3090 Ti",
+   "peak": 2,
+   "peak_users": [
+    "SpectralWarlock",
+    "SpectralKraken"
+   ],
+   "now": 1,
+   "now_users": [
+    {
+     "user": "SpectralWarlock",
+     "since": 1786053254,
+     "crasher": false
+    }
+   ]
+  },
+  {
    "host": "cackling-l",
    "gpu": "RTX 3090 Ti",
    "peak": 2,
@@ -270,17 +287,6 @@
    "peak_users": [
     "CaffeinatedBasilisk",
     "CaffeinatedGremlin2"
-   ],
-   "now": 0,
-   "now_users": []
-  },
-  {
-   "host": "shoveler-l",
-   "gpu": "RTX 3090 Ti",
-   "peak": 2,
-   "peak_users": [
-    "SpectralWarlock",
-    "SpectralKraken"
    ],
    "now": 0,
    "now_users": []
@@ -1509,24 +1515,26 @@
    "t": 1786052700,
    "rtx3090": {
     "util": 0.0,
-    "mem": 0.1,
-    "busy": 0.0,
-    "procs": 0.0,
-    "temp": 35.0
+    "mem": 6.7,
+    "busy": 0.5,
+    "procs": 0.5,
+    "temp": 40.5
    }
   }
  ],
  "season_days": 2,
- "window_hours": 29.54,
- "samples": 887,
+ "window_hours": 29.57,
+ "samples": 888,
  "leaderboard": [
   {
    "user": "SpectralWarlock",
-   "hours": 146.61,
-   "live": 0,
+   "hours": 146.64,
+   "live": 1,
    "night": 33.79,
    "morning": 14.9,
-   "days": 2
+   "days": 2,
+   "since": 1786053254,
+   "floor": false
   },
   {
    "user": "TurboPhantom",
@@ -1658,30 +1666,42 @@
   }
  ],
  "live": {
-  "free": [
+  "free": [],
+  "busy": [
    {
     "host": "shoveler-l",
     "gpu": "RTX 3090 Ti",
-    "mem": 72,
+    "mem": 13676,
     "mem_total": 24564,
     "util": 0,
-    "users": [],
+    "users": [
+     "SpectralWarlock"
+    ],
     "smi": {
      "driver": "590.44.01",
-     "util_mem": "2 %",
-     "temp": "35",
-     "power": "10.56 W",
+     "util_mem": "0 %",
+     "temp": "46",
+     "power": "98.53 W",
      "power_limit": "450.00 W",
      "fan": "0 %",
-     "clock_sm": "210 MHz",
+     "clock_sm": "1890 MHz",
      "clock_max": "2130 MHz",
      "persistence": "Enabled",
      "compute_mode": "Default"
     },
-    "processes": []
+    "processes": [
+     {
+      "pid": 4762,
+      "user": "SpectralWarlock",
+      "mem": 13598,
+      "etimes": 72,
+      "cpu": "327",
+      "rss": 10528568,
+      "name": "python"
+     }
+    ]
    }
   ],
-  "busy": [],
   "unreachable": [
    "aylesbury-l",
    "barnacle-l",
