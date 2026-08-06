@@ -1,5 +1,5 @@
 {
- "generated": 1786049054,
+ "generated": 1786049196,
  "season": {
   "n": 3,
   "start": 1785946770,
@@ -242,23 +242,6 @@
    "now_users": []
   },
   {
-   "host": "shoveler-l",
-   "gpu": "RTX 3090 Ti",
-   "peak": 2,
-   "peak_users": [
-    "SpectralWarlock",
-    "SpectralKraken"
-   ],
-   "now": 1,
-   "now_users": [
-    {
-     "user": "SpectralWarlock",
-     "since": 1786049054,
-     "crasher": false
-    }
-   ]
-  },
-  {
    "host": "cackling-l",
    "gpu": "RTX 3090 Ti",
    "peak": 2,
@@ -287,6 +270,17 @@
    "peak_users": [
     "CaffeinatedBasilisk",
     "CaffeinatedGremlin2"
+   ],
+   "now": 0,
+   "now_users": []
+  },
+  {
+   "host": "shoveler-l",
+   "gpu": "RTX 3090 Ti",
+   "peak": 2,
+   "peak_users": [
+    "SpectralWarlock",
+    "SpectralKraken"
    ],
    "now": 0,
    "now_users": []
@@ -1470,21 +1464,22 @@
     "procs": 0.5,
     "temp": 35.8
    }
+  },
+  {
+   "t": 1786049100
   }
  ],
  "season_days": 2,
- "window_hours": 28.4,
- "samples": 853,
+ "window_hours": 28.44,
+ "samples": 854,
  "leaderboard": [
   {
    "user": "SpectralWarlock",
    "hours": 146.38,
-   "live": 1,
+   "live": 0,
    "night": 33.79,
    "morning": 14.9,
-   "days": 2,
-   "since": 1786049054,
-   "floor": false
+   "days": 2
   },
   {
    "user": "TurboPhantom",
@@ -1617,41 +1612,7 @@
  ],
  "live": {
   "free": [],
-  "busy": [
-   {
-    "host": "shoveler-l",
-    "gpu": "RTX 3090 Ti",
-    "mem": 13658,
-    "mem_total": 24564,
-    "util": 0,
-    "users": [
-     "SpectralWarlock"
-    ],
-    "smi": {
-     "driver": "590.44.01",
-     "util_mem": "0 %",
-     "temp": "43",
-     "power": "97.22 W",
-     "power_limit": "450.00 W",
-     "fan": "0 %",
-     "clock_sm": "1890 MHz",
-     "clock_max": "2130 MHz",
-     "persistence": "Enabled",
-     "compute_mode": "Default"
-    },
-    "processes": [
-     {
-      "pid": 4539,
-      "user": "SpectralWarlock",
-      "mem": 13580,
-      "etimes": 42,
-      "cpu": "224",
-      "rss": 10266156,
-      "name": "python"
-     }
-    ]
-   }
-  ],
+  "busy": [],
   "unreachable": [
    "aylesbury-l",
    "barnacle-l",
@@ -1673,6 +1634,7 @@
    "scaup-l",
    "scoter-l",
    "shelduck-l",
+   "shoveler-l",
    "smew-l",
    "wigeon-l",
    "albacore-l",
