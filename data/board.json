@@ -1,5 +1,5 @@
 {
- "generated": 1786398637,
+ "generated": 1786398733,
  "season": {
   "n": 3,
   "start": 1785946770,
@@ -71,7 +71,7 @@
   "reboot_rush": [
    {
     "user": "SpectralWarlock",
-    "claims": 120
+    "claims": 122
    },
    {
     "user": "NocturnalBasilisk",
@@ -79,7 +79,7 @@
    },
    {
     "user": "GreedyGremlin2",
-    "claims": 28
+    "claims": 25
    },
    {
     "user": "RogueYak2",
@@ -227,8 +227,14 @@
     "GreedyBadger",
     "CaffeinatedYak"
    ],
-   "now": 0,
-   "now_users": []
+   "now": 1,
+   "now_users": [
+    {
+     "user": "SpectralWarlock",
+     "since": 1786398133,
+     "crasher": false
+    }
+   ]
   },
   {
    "host": "aylesbury-l",
@@ -5385,20 +5391,29 @@
    }
   },
   {
-   "t": 1786398300
+   "t": 1786398300,
+   "rtx3090": {
+    "util": 0.0,
+    "mem": 13.3,
+    "busy": 1.0,
+    "procs": 1.0,
+    "temp": 42.0
+   }
   }
  ],
  "season_days": 6,
- "window_hours": 125.51,
- "samples": 3766,
+ "window_hours": 125.53,
+ "samples": 3767,
  "leaderboard": [
   {
    "user": "SpectralWarlock",
-   "hours": 507.98,
-   "live": 0,
+   "hours": 508.0,
+   "live": 1,
    "night": 155.11,
    "morning": 69.02,
-   "days": 6
+   "days": 6,
+   "since": 1786398133,
+   "floor": false
   },
   {
    "user": "GreedyGremlin2",
@@ -5611,7 +5626,41 @@
  ],
  "live": {
   "free": [],
-  "busy": [],
+  "busy": [
+   {
+    "host": "shoveler-l",
+    "gpu": "RTX 3090 Ti",
+    "mem": 13608,
+    "mem_total": 24564,
+    "util": 0,
+    "users": [
+     "SpectralWarlock"
+    ],
+    "smi": {
+     "driver": "590.44.01",
+     "util_mem": "0 %",
+     "temp": "42",
+     "power": "97.00 W",
+     "power_limit": "450.00 W",
+     "fan": "33 %",
+     "clock_sm": "1890 MHz",
+     "clock_max": "2130 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": [
+     {
+      "pid": 4328,
+      "user": "SpectralWarlock",
+      "mem": 13530,
+      "etimes": 10,
+      "cpu": "65.7",
+      "rss": 798468,
+      "name": "python"
+     }
+    ]
+   }
+  ],
   "unreachable": [
    "aylesbury-l",
    "barnacle-l",
@@ -5633,7 +5682,6 @@
    "scaup-l",
    "scoter-l",
    "shelduck-l",
-   "shoveler-l",
    "smew-l",
    "wigeon-l",
    "albacore-l",
