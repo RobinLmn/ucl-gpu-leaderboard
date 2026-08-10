@@ -1,5 +1,5 @@
 {
- "generated": 1786401130,
+ "generated": 1786401253,
  "season": {
   "n": 3,
   "start": 1785946770,
@@ -71,7 +71,7 @@
   "reboot_rush": [
    {
     "user": "SpectralWarlock",
-    "claims": 125
+    "claims": 137
    },
    {
     "user": "NocturnalBasilisk",
@@ -79,15 +79,15 @@
    },
    {
     "user": "GreedyGremlin2",
-    "claims": 25
-   },
-   {
-    "user": "RogueYak2",
-    "claims": 13
+    "claims": 28
    },
    {
     "user": "SleeplessBasilisk",
     "claims": 10
+   },
+   {
+    "user": "CaffeinatedBasilisk",
+    "claims": 9
    }
   ],
   "squatters": [
@@ -227,8 +227,14 @@
     "GreedyBadger",
     "CaffeinatedYak"
    ],
-   "now": 0,
-   "now_users": []
+   "now": 1,
+   "now_users": [
+    {
+     "user": "SpectralWarlock",
+     "since": 1786401253,
+     "crasher": false
+    }
+   ]
   },
   {
    "host": "aylesbury-l",
@@ -5418,24 +5424,26 @@
    "t": 1786401000,
    "rtx3090": {
     "util": 0.0,
-    "mem": 0.1,
-    "busy": 0.0,
-    "procs": 0.0,
-    "temp": 36.0
+    "mem": 6.7,
+    "busy": 0.5,
+    "procs": 0.5,
+    "temp": 40.5
    }
   }
  ],
  "season_days": 6,
- "window_hours": 126.2,
- "samples": 3787,
+ "window_hours": 126.23,
+ "samples": 3788,
  "leaderboard": [
   {
    "user": "SpectralWarlock",
-   "hours": 508.14,
-   "live": 0,
-   "night": 155.21,
+   "hours": 508.17,
+   "live": 1,
+   "night": 155.25,
    "morning": 69.02,
-   "days": 6
+   "days": 6,
+   "since": 1786401253,
+   "floor": false
   },
   {
    "user": "GreedyGremlin2",
@@ -5647,30 +5655,42 @@
   }
  ],
  "live": {
-  "free": [
+  "free": [],
+  "busy": [
    {
     "host": "shoveler-l",
     "gpu": "RTX 3090 Ti",
-    "mem": 72,
+    "mem": 13658,
     "mem_total": 24564,
     "util": 0,
-    "users": [],
+    "users": [
+     "SpectralWarlock"
+    ],
     "smi": {
      "driver": "590.44.01",
-     "util_mem": "2 %",
-     "temp": "36",
-     "power": "10.12 W",
+     "util_mem": "0 %",
+     "temp": "45",
+     "power": "97.67 W",
      "power_limit": "450.00 W",
-     "fan": "30 %",
-     "clock_sm": "210 MHz",
+     "fan": "0 %",
+     "clock_sm": "1890 MHz",
      "clock_max": "2130 MHz",
      "persistence": "Enabled",
      "compute_mode": "Default"
     },
-    "processes": []
+    "processes": [
+     {
+      "pid": 5624,
+      "user": "SpectralWarlock",
+      "mem": 13580,
+      "etimes": 36,
+      "cpu": "94.8",
+      "rss": 4539180,
+      "name": "python"
+     }
+    ]
    }
   ],
-  "busy": [],
   "unreachable": [
    "aylesbury-l",
    "barnacle-l",
