@@ -1,5 +1,5 @@
 {
- "generated": 1786402838,
+ "generated": 1786402932,
  "season": {
   "n": 3,
   "start": 1785946770,
@@ -71,7 +71,7 @@
   "reboot_rush": [
    {
     "user": "SpectralWarlock",
-    "claims": 125
+    "claims": 137
    },
    {
     "user": "NocturnalBasilisk",
@@ -79,15 +79,15 @@
    },
    {
     "user": "GreedyGremlin2",
-    "claims": 25
-   },
-   {
-    "user": "RogueYak2",
-    "claims": 13
+    "claims": 28
    },
    {
     "user": "SleeplessBasilisk",
     "claims": 10
+   },
+   {
+    "user": "CaffeinatedBasilisk",
+    "claims": 9
    }
   ],
   "squatters": [
@@ -5435,12 +5435,19 @@
    }
   },
   {
-   "t": 1786402800
+   "t": 1786402800,
+   "rtx3090": {
+    "util": 0.0,
+    "mem": 0.1,
+    "busy": 0.0,
+    "procs": 0.0,
+    "temp": 38.5
+   }
   }
  ],
  "season_days": 7,
- "window_hours": 126.67,
- "samples": 3801,
+ "window_hours": 126.7,
+ "samples": 3802,
  "leaderboard": [
   {
    "user": "SpectralWarlock",
@@ -5660,10 +5667,52 @@
   }
  ],
  "live": {
-  "free": [],
+  "free": [
+   {
+    "host": "aylesbury-l",
+    "gpu": "RTX 3090 Ti",
+    "mem": 38,
+    "mem_total": 24564,
+    "util": 0,
+    "users": [],
+    "smi": {
+     "driver": "610.43.02",
+     "util_mem": "0 %",
+     "temp": "32",
+     "power": "12.59 W",
+     "power_limit": "450.00 W",
+     "fan": "0 %",
+     "clock_sm": "210 MHz",
+     "clock_max": "2130 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": []
+   },
+   {
+    "host": "wigeon-l",
+    "gpu": "RTX 3090 Ti",
+    "mem": 30,
+    "mem_total": 24564,
+    "util": 0,
+    "users": [],
+    "smi": {
+     "driver": "590.44.01",
+     "util_mem": "0 %",
+     "temp": "45",
+     "power": "11.91 W",
+     "power_limit": "450.00 W",
+     "fan": "0 %",
+     "clock_sm": "210 MHz",
+     "clock_max": "2100 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": []
+   }
+  ],
   "busy": [],
   "unreachable": [
-   "aylesbury-l",
    "barnacle-l",
    "brent-l",
    "bufflehead-l",
@@ -5685,7 +5734,6 @@
    "shelduck-l",
    "shoveler-l",
    "smew-l",
-   "wigeon-l",
    "albacore-l",
    "barbel-l",
    "chub-l",
@@ -5833,7 +5881,7 @@
    "host": "wigeon-l",
    "gpu": "RTX 3090 Ti",
    "busy_pct": 85.9,
-   "hours": 114.0
+   "hours": 114.1
   },
   {
    "host": "ruddy-l",
