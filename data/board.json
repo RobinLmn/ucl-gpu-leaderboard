@@ -1,5 +1,5 @@
 {
- "generated": 1786392634,
+ "generated": 1786392733,
  "season": {
   "n": 3,
   "start": 1785946770,
@@ -71,7 +71,7 @@
   "reboot_rush": [
    {
     "user": "SpectralWarlock",
-    "claims": 115
+    "claims": 127
    },
    {
     "user": "NocturnalBasilisk",
@@ -82,12 +82,12 @@
     "claims": 25
    },
    {
-    "user": "RogueYak2",
-    "claims": 13
-   },
-   {
     "user": "SleeplessBasilisk",
     "claims": 10
+   },
+   {
+    "user": "CaffeinatedBasilisk",
+    "claims": 9
    }
   ],
   "squatters": [
@@ -227,8 +227,14 @@
     "GreedyBadger",
     "CaffeinatedYak"
    ],
-   "now": 0,
-   "now_users": []
+   "now": 1,
+   "now_users": [
+    {
+     "user": "SpectralWarlock",
+     "since": 1786392150,
+     "crasher": false
+    }
+   ]
   },
   {
    "host": "aylesbury-l",
@@ -5317,25 +5323,27 @@
   {
    "t": 1786392000,
    "rtx3090": {
-    "util": 25.0,
-    "mem": 13.7,
+    "util": 16.7,
+    "mem": 13.5,
     "busy": 1.0,
     "procs": 1.0,
-    "temp": 37.0
+    "temp": 38.7
    }
   }
  ],
  "season_days": 6,
- "window_hours": 123.84,
- "samples": 3716,
+ "window_hours": 123.87,
+ "samples": 3717,
  "leaderboard": [
   {
    "user": "SpectralWarlock",
-   "hours": 507.7,
-   "live": 0,
+   "hours": 507.72,
+   "live": 1,
    "night": 155.11,
    "morning": 69.02,
-   "days": 6
+   "days": 6,
+   "since": 1786392150,
+   "floor": false
   },
   {
    "user": "GreedyGremlin2",
@@ -5548,7 +5556,41 @@
  ],
  "live": {
   "free": [],
-  "busy": [],
+  "busy": [
+   {
+    "host": "shoveler-l",
+    "gpu": "RTX 3090 Ti",
+    "mem": 13612,
+    "mem_total": 24564,
+    "util": 0,
+    "users": [
+     "SpectralWarlock"
+    ],
+    "smi": {
+     "driver": "590.44.01",
+     "util_mem": "0 %",
+     "temp": "42",
+     "power": "95.36 W",
+     "power_limit": "450.00 W",
+     "fan": "0 %",
+     "clock_sm": "1890 MHz",
+     "clock_max": "2130 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": [
+     {
+      "pid": 4346,
+      "user": "SpectralWarlock",
+      "mem": 13534,
+      "etimes": 17,
+      "cpu": "58.8",
+      "rss": 2231120,
+      "name": "python"
+     }
+    ]
+   }
+  ],
   "unreachable": [
    "aylesbury-l",
    "barnacle-l",
@@ -5570,7 +5612,6 @@
    "scaup-l",
    "scoter-l",
    "shelduck-l",
-   "shoveler-l",
    "smew-l",
    "wigeon-l",
    "albacore-l",
