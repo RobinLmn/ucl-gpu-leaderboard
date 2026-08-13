@@ -1,5 +1,5 @@
 {
- "generated": 1786662037,
+ "generated": 1786662127,
  "season": {
   "n": 4,
   "start": 1786551570,
@@ -51,7 +51,7 @@
    },
    {
     "user": "CaffeinatedYak",
-    "seconds": 240
+    "seconds": 1440
    }
   ],
   "longest_hold": [
@@ -1547,12 +1547,19 @@
    }
   },
   {
-   "t": 1786662000
+   "t": 1786662000,
+   "rtx3090": {
+    "util": 0.0,
+    "mem": 0.0,
+    "busy": 0.0,
+    "procs": 0.0,
+    "temp": 33.0
+   }
   }
  ],
  "season_days": 3,
- "window_hours": 30.68,
- "samples": 921,
+ "window_hours": 30.7,
+ "samples": 922,
  "leaderboard": [
   {
    "user": "GreedyGremlin2",
@@ -1732,10 +1739,31 @@
   }
  ],
  "live": {
-  "free": [],
+  "free": [
+   {
+    "host": "aylesbury-l",
+    "gpu": "RTX 3090 Ti",
+    "mem": 38,
+    "mem_total": 24564,
+    "util": 0,
+    "users": [],
+    "smi": {
+     "driver": "610.43.02",
+     "util_mem": "0 %",
+     "temp": "33",
+     "power": "10.75 W",
+     "power_limit": "450.00 W",
+     "fan": "0 %",
+     "clock_sm": "210 MHz",
+     "clock_max": "2130 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": []
+   }
+  ],
   "busy": [],
   "unreachable": [
-   "aylesbury-l",
    "barnacle-l",
    "brent-l",
    "bufflehead-l",
@@ -1818,16 +1846,16 @@
    "hours": 26.5
   },
   {
-   "host": "aylesbury-l",
-   "gpu": "RTX 3090 Ti",
-   "busy_pct": 93.7,
-   "hours": 26.6
-  },
-  {
    "host": "shoveler-l",
    "gpu": "RTX 3090 Ti",
    "busy_pct": 93.7,
    "hours": 27.5
+  },
+  {
+   "host": "aylesbury-l",
+   "gpu": "RTX 3090 Ti",
+   "busy_pct": 93.6,
+   "hours": 26.6
   },
   {
    "host": "bufflehead-l",
