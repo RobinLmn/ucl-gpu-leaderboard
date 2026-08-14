@@ -1,5 +1,5 @@
 {
- "generated": 1786709766,
+ "generated": 1786709886,
  "season": {
   "n": 4,
   "start": 1786551570,
@@ -50,8 +50,8 @@
     "seconds": 120
    },
    {
-    "user": "CaffeinatedWizard",
-    "seconds": 239
+    "user": "SpectralWarlock",
+    "seconds": 120
    }
   ],
   "longest_hold": [
@@ -256,6 +256,23 @@
    "now_users": []
   },
   {
+   "host": "aylesbury-l",
+   "gpu": "RTX 3090 Ti",
+   "peak": 2,
+   "peak_users": [
+    "SpectralWizard",
+    "CaffeinatedYak"
+   ],
+   "now": 1,
+   "now_users": [
+    {
+     "user": "RadiantYak",
+     "since": 1786709886,
+     "crasher": false
+    }
+   ]
+  },
+  {
    "host": "brent-l",
    "gpu": "RTX 3090 Ti",
    "peak": 2,
@@ -339,17 +356,6 @@
      "crasher": false
     }
    ]
-  },
-  {
-   "host": "aylesbury-l",
-   "gpu": "RTX 3090 Ti",
-   "peak": 2,
-   "peak_users": [
-    "SpectralWizard",
-    "CaffeinatedYak"
-   ],
-   "now": 0,
-   "now_users": []
   }
  ],
  "gpu_awards": {
@@ -361,7 +367,7 @@
   "furnace": {
    "temp": 87,
    "peak": 95,
-   "samples": 1186,
+   "samples": 1187,
    "host": "scaup-l",
    "gpu": "RTX 3090 Ti"
   },
@@ -2133,21 +2139,21 @@
   {
    "t": 1786709700,
    "rtx3090": {
-    "util": 79.1,
-    "mem": 136.3,
-    "busy": 8.0,
-    "procs": 17.0,
-    "temp": 70.5
+    "util": 79.6,
+    "mem": 146.3,
+    "busy": 8.5,
+    "procs": 18.5,
+    "temp": 71.8
    }
   }
  ],
  "season_days": 3,
- "window_hours": 43.93,
- "samples": 1319,
+ "window_hours": 43.97,
+ "samples": 1320,
  "leaderboard": [
   {
    "user": "GreedyGremlin2",
-   "hours": 169.47,
+   "hours": 169.63,
    "live": 5,
    "night": 68.26,
    "morning": 32.9,
@@ -2157,7 +2163,7 @@
   },
   {
    "user": "NocturnalBasilisk",
-   "hours": 46.5,
+   "hours": 46.53,
    "live": 1,
    "night": 18.33,
    "morning": 8.57,
@@ -2215,8 +2221,8 @@
   },
   {
    "user": "RadiantYak",
-   "hours": 10.63,
-   "live": 2,
+   "hours": 10.73,
+   "live": 3,
    "night": 0.0,
    "morning": 0.0,
    "days": 1,
@@ -2355,27 +2361,6 @@
  "live": {
   "free": [
    {
-    "host": "aylesbury-l",
-    "gpu": "RTX 3090 Ti",
-    "mem": 38,
-    "mem_total": 24564,
-    "util": 0,
-    "users": [],
-    "smi": {
-     "driver": "610.43.02",
-     "util_mem": "0 %",
-     "temp": "39",
-     "power": "23.71 W",
-     "power_limit": "450.00 W",
-     "fan": "0 %",
-     "clock_sm": "210 MHz",
-     "clock_max": "2130 MHz",
-     "persistence": "Enabled",
-     "compute_mode": "Default"
-    },
-    "processes": []
-   },
-   {
     "host": "crested-l",
     "gpu": "RTX 3090 Ti",
     "mem": 111,
@@ -2386,7 +2371,7 @@
      "driver": "590.44.01",
      "util_mem": "0 %",
      "temp": "40",
-     "power": "4.06 W",
+     "power": "3.84 W",
      "power_limit": "450.00 W",
      "fan": "0 %",
      "clock_sm": "210 MHz",
@@ -2419,6 +2404,57 @@
   ],
   "busy": [
    {
+    "host": "aylesbury-l",
+    "gpu": "RTX 3090 Ti",
+    "mem": 20561,
+    "mem_total": 24564,
+    "util": 100,
+    "users": [
+     "RadiantYak"
+    ],
+    "smi": {
+     "driver": "610.43.02",
+     "util_mem": "69 %",
+     "temp": "67",
+     "power": "319.55 W",
+     "power_limit": "450.00 W",
+     "fan": "44 %",
+     "clock_sm": "2040 MHz",
+     "clock_max": "2130 MHz",
+     "persistence": "Enabled",
+     "compute_mode": "Default"
+    },
+    "processes": [
+     {
+      "pid": 1488113,
+      "user": "RadiantYak",
+      "mem": 19336,
+      "etimes": 91,
+      "cpu": "177",
+      "rss": 2543516,
+      "name": "python3.10"
+     },
+     {
+      "pid": 1489788,
+      "user": "RadiantYak",
+      "mem": 584,
+      "etimes": 69,
+      "cpu": "33.0",
+      "rss": 1558252,
+      "name": "ray::BatchPoolingActor"
+     },
+     {
+      "pid": 1489787,
+      "user": "RadiantYak",
+      "mem": 584,
+      "etimes": 69,
+      "cpu": "32.8",
+      "rss": 1676220,
+      "name": "ray::BatchPoolingActor"
+     }
+    ]
+   },
+   {
     "host": "brent-l",
     "gpu": "RTX 3090 Ti",
     "mem": 18948,
@@ -2430,11 +2466,11 @@
     "smi": {
      "driver": "590.44.01",
      "util_mem": "0 %",
-     "temp": "69",
-     "power": "374.94 W",
+     "temp": "71",
+     "power": "394.36 W",
      "power_limit": "450.00 W",
      "fan": "81 %",
-     "clock_sm": "1965 MHz",
+     "clock_sm": "1995 MHz",
      "clock_max": "2100 MHz",
      "persistence": "Enabled",
      "compute_mode": "Default"
@@ -2444,7 +2480,7 @@
       "pid": 9891,
       "user": "GreedyGremlin2",
       "mem": 17674,
-      "etimes": 46819,
+      "etimes": 46939,
       "cpu": "0.0",
       "rss": 754672,
       "name": "python3"
@@ -2453,7 +2489,7 @@
       "pid": 9562,
       "user": "GreedyGremlin2",
       "mem": 1154,
-      "etimes": 46935,
+      "etimes": 47055,
       "cpu": "99.7",
       "rss": 1689108,
       "name": "python3"
@@ -2473,9 +2509,9 @@
      "driver": "590.44.01",
      "util_mem": "0 %",
      "temp": "81",
-     "power": "337.23 W",
+     "power": "397.32 W",
      "power_limit": "450.00 W",
-     "fan": "89 %",
+     "fan": "90 %",
      "clock_sm": "1920 MHz",
      "clock_max": "2100 MHz",
      "persistence": "Enabled",
@@ -2486,7 +2522,7 @@
       "pid": 8824,
       "user": "GreedyGremlin2",
       "mem": 17674,
-      "etimes": 46550,
+      "etimes": 46670,
       "cpu": "0.0",
       "rss": 754412,
       "name": "python3"
@@ -2495,7 +2531,7 @@
       "pid": 8574,
       "user": "GreedyGremlin2",
       "mem": 1156,
-      "etimes": 46572,
+      "etimes": 46692,
       "cpu": "99.4",
       "rss": 1807104,
       "name": "python3"
@@ -2507,18 +2543,18 @@
     "gpu": "RTX 3090 Ti",
     "mem": 20545,
     "mem_total": 24564,
-    "util": 100,
+    "util": 99,
     "users": [
      "RadiantYak"
     ],
     "smi": {
      "driver": "590.44.01",
-     "util_mem": "61 %",
-     "temp": "72",
-     "power": "393.86 W",
+     "util_mem": "57 %",
+     "temp": "73",
+     "power": "393.08 W",
      "power_limit": "450.00 W",
      "fan": "71 %",
-     "clock_sm": "1965 MHz",
+     "clock_sm": "1980 MHz",
      "clock_max": "2130 MHz",
      "persistence": "Enabled",
      "compute_mode": "Default"
@@ -2528,28 +2564,28 @@
       "pid": 188529,
       "user": "RadiantYak",
       "mem": 19334,
-      "etimes": 805,
+      "etimes": 925,
       "cpu": "159",
-      "rss": 7697508,
+      "rss": 8498580,
       "name": "python3.10"
      },
      {
       "pid": 190149,
       "user": "RadiantYak",
       "mem": 584,
-      "etimes": 789,
-      "cpu": "33.8",
-      "rss": 1858708,
-      "name": "ray::BatchPoolingActor"
+      "etimes": 909,
+      "cpu": "33.6",
+      "rss": 1924140,
+      "name": "ray::BatchPoolingActor.convert_batch_to_graph_nodes"
      },
      {
       "pid": 190150,
       "user": "RadiantYak",
       "mem": 584,
-      "etimes": 789,
-      "cpu": "34.0",
-      "rss": 2152108,
-      "name": "ray::BatchPoolingActor.convert_batch_to_graph_nodes"
+      "etimes": 909,
+      "cpu": "33.6",
+      "rss": 2036464,
+      "name": "ray::BatchPoolingActor"
      }
     ]
    },
@@ -2558,17 +2594,17 @@
     "gpu": "RTX 3090 Ti",
     "mem": 20553,
     "mem_total": 24564,
-    "util": 91,
+    "util": 87,
     "users": [
      "NocturnalBasilisk"
     ],
     "smi": {
      "driver": "590.44.01",
-     "util_mem": "54 %",
-     "temp": "69",
-     "power": "351.32 W",
+     "util_mem": "62 %",
+     "temp": "65",
+     "power": "269.12 W",
      "power_limit": "450.00 W",
-     "fan": "53 %",
+     "fan": "57 %",
      "clock_sm": "1890 MHz",
      "clock_max": "2130 MHz",
      "persistence": "Enabled",
@@ -2579,9 +2615,9 @@
       "pid": 2104023,
       "user": "NocturnalBasilisk",
       "mem": 20436,
-      "etimes": 2674,
+      "etimes": 2794,
       "cpu": "101",
-      "rss": 2131756,
+      "rss": 2133592,
       "name": "ray::RayWorkerWrapper"
      }
     ]
@@ -2598,11 +2634,11 @@
     "smi": {
      "driver": "590.44.01",
      "util_mem": "0 %",
-     "temp": "72",
-     "power": "401.85 W",
+     "temp": "74",
+     "power": "405.99 W",
      "power_limit": "450.00 W",
-     "fan": "80 %",
-     "clock_sm": "1890 MHz",
+     "fan": "79 %",
+     "clock_sm": "2055 MHz",
      "clock_max": "2130 MHz",
      "persistence": "Enabled",
      "compute_mode": "Default"
@@ -2612,7 +2648,7 @@
       "pid": 156323,
       "user": "GreedyGremlin2",
       "mem": 17674,
-      "etimes": 7701,
+      "etimes": 7822,
       "cpu": "0.0",
       "rss": 754468,
       "name": "python3"
@@ -2621,7 +2657,7 @@
       "pid": 8798,
       "user": "GreedyGremlin2",
       "mem": 1156,
-      "etimes": 46084,
+      "etimes": 46205,
       "cpu": "99.8",
       "rss": 1680508,
       "name": "python3"
@@ -2641,10 +2677,10 @@
      "driver": "590.44.01",
      "util_mem": "0 %",
      "temp": "92",
-     "power": "295.68 W",
+     "power": "299.44 W",
      "power_limit": "450.00 W",
      "fan": "0 %",
-     "clock_sm": "1710 MHz",
+     "clock_sm": "1800 MHz",
      "clock_max": "2100 MHz",
      "persistence": "Enabled",
      "compute_mode": "Default"
@@ -2654,7 +2690,7 @@
       "pid": 8793,
       "user": "GreedyGremlin2",
       "mem": 17674,
-      "etimes": 46444,
+      "etimes": 46565,
       "cpu": "0.0",
       "rss": 754868,
       "name": "python3"
@@ -2663,7 +2699,7 @@
       "pid": 8609,
       "user": "GreedyGremlin2",
       "mem": 1158,
-      "etimes": 46474,
+      "etimes": 46595,
       "cpu": "99.8",
       "rss": 1806324,
       "name": "python3"
@@ -2683,10 +2719,10 @@
      "driver": "590.44.01",
      "util_mem": "5 %",
      "temp": "83",
-     "power": "342.27 W",
+     "power": "330.77 W",
      "power_limit": "450.00 W",
      "fan": "0 %",
-     "clock_sm": "1965 MHz",
+     "clock_sm": "1935 MHz",
      "clock_max": "2100 MHz",
      "persistence": "Enabled",
      "compute_mode": "Default"
@@ -2696,7 +2732,7 @@
       "pid": 12165,
       "user": "GreedyGremlin2",
       "mem": 1142,
-      "etimes": 45215,
+      "etimes": 45336,
       "cpu": "99.6",
       "rss": 1850388,
       "name": "python3"
@@ -2705,7 +2741,7 @@
       "pid": 12246,
       "user": "GreedyGremlin2",
       "mem": 1142,
-      "etimes": 45186,
+      "etimes": 45307,
       "cpu": "99.6",
       "rss": 1848968,
       "name": "python3"
@@ -2717,18 +2753,18 @@
     "gpu": "RTX 3090 Ti",
     "mem": 20225,
     "mem_total": 24564,
-    "util": 100,
+    "util": 15,
     "users": [
      "RadiantYak"
     ],
     "smi": {
      "driver": "590.44.01",
-     "util_mem": "56 %",
-     "temp": "88",
-     "power": "447.79 W",
+     "util_mem": "0 %",
+     "temp": "84",
+     "power": "395.67 W",
      "power_limit": "450.00 W",
      "fan": "0 %",
-     "clock_sm": "1920 MHz",
+     "clock_sm": "1905 MHz",
      "clock_max": "2100 MHz",
      "persistence": "Enabled",
      "compute_mode": "Default"
@@ -2738,27 +2774,27 @@
       "pid": 124536,
       "user": "RadiantYak",
       "mem": 19334,
-      "etimes": 449,
-      "cpu": "138",
-      "rss": 7758012,
+      "etimes": 570,
+      "cpu": "141",
+      "rss": 9598272,
       "name": "python3.10"
      },
      {
       "pid": 126192,
       "user": "RadiantYak",
       "mem": 424,
-      "etimes": 377,
-      "cpu": "40.7",
-      "rss": 2721232,
-      "name": "ray::BatchPoolingActor"
+      "etimes": 498,
+      "cpu": "41.0",
+      "rss": 2929116,
+      "name": "ray::BatchPoolingActor.convert_batch_to_graph_nodes"
      },
      {
       "pid": 126193,
       "user": "RadiantYak",
       "mem": 424,
-      "etimes": 377,
-      "cpu": "41.2",
-      "rss": 3006748,
+      "etimes": 498,
+      "cpu": "41.4",
+      "rss": 3014496,
       "name": "ray::BatchPoolingActor"
      }
     ]
@@ -2821,19 +2857,19 @@
    "host": "brent-l",
    "gpu": "RTX 3090 Ti",
    "busy_pct": 99.0,
-   "hours": 13.1
+   "hours": 13.2
   },
   {
    "host": "ruddy-l",
    "gpu": "RTX 3090 Ti",
    "busy_pct": 99.0,
-   "hours": 12.9
+   "hours": 13.0
   },
   {
    "host": "mandarin-l",
    "gpu": "RTX 3090 Ti",
    "busy_pct": 98.4,
-   "hours": 35.9
+   "hours": 36.0
   },
   {
    "host": "harlequin-l",
@@ -2845,7 +2881,7 @@
    "host": "aylesbury-l",
    "gpu": "RTX 3090 Ti",
    "busy_pct": 93.8,
-   "hours": 39.8
+   "hours": 39.9
   },
   {
    "host": "bufflehead-l",
@@ -2880,8 +2916,8 @@
   {
    "host": "crested-l",
    "gpu": "RTX 3090 Ti",
-   "busy_pct": 74.4,
-   "hours": 38.9
+   "busy_pct": 74.3,
+   "hours": 39.0
   },
   {
    "host": "shelduck-l",
@@ -2892,14 +2928,14 @@
   {
    "host": "goosander-l",
    "gpu": "RTX 3090 Ti",
-   "busy_pct": 57.7,
-   "hours": 12.2
+   "busy_pct": 57.9,
+   "hours": 12.3
   },
   {
    "host": "eider-l",
    "gpu": "no GPU",
    "busy_pct": 0.2,
-   "hours": 39.0
+   "hours": 39.1
   },
   {
    "host": "gressingham-l",
